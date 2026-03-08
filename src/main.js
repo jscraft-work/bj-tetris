@@ -19,6 +19,12 @@ const overlay = document.getElementById('overlay');
 const overlayStatus = document.getElementById('overlayStatus');
 const overlaySub = document.getElementById('overlaySub');
 const overlayAction = document.getElementById('overlayAction');
+const ctrlLeft = document.getElementById('ctrlLeft');
+const ctrlRight = document.getElementById('ctrlRight');
+const ctrlRotate = document.getElementById('ctrlRotate');
+const ctrlSoft = document.getElementById('ctrlSoft');
+const ctrlHard = document.getElementById('ctrlHard');
+const ctrlPause = document.getElementById('ctrlPause');
 const ctx = canvas.getContext('2d');
 
 const HOLD_DELAY_MS = 170;
@@ -28,7 +34,6 @@ const ROTATE_DEBOUNCE_MS = 120;
 let gameState = createInitialState();
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
-
 const input = {
   moveDir: 0,
   holdStartedAt: 0,
@@ -38,23 +43,43 @@ const input = {
   rightDown: false,
   rotateCooldownUntil: 0,
 };
+const hudState = {
+  status: '',
+  level: '',
+  lines: '',
+  score: '',
+};
 
-function hardRestart() {
-  gameState = createInitialState();
-  input.leftDown = false;
-  input.rightDown = false;
-  input.moveDir = 0;
-  input.holdStartedAt = 0;
-  input.holdLastMoveAt = 0;
-  input.softDrop = false;
-  overlay.classList.add('hidden');
+function markPressed(button, active) {
+  if (!button) {
+    return;
+  }
+
+  button.classList.toggle('pressed', !!active);
 }
 
 function applyHud() {
-  statusText.textContent = gameState.status.toUpperCase();
-  levelText.textContent = String(gameState.level);
-  linesText.textContent = String(gameState.lines);
-  scoreText.textContent = String(gameState.score);
+  const status = gameState.status.toUpperCase();
+  const level = String(gameState.level);
+  const lines = String(gameState.lines);
+  const score = String(gameState.score);
+
+  if (hudState.status !== status) {
+    statusText.textContent = status;
+    hudState.status = status;
+  }
+  if (hudState.level !== level) {
+    levelText.textContent = level;
+    hudState.level = level;
+  }
+  if (hudState.lines !== lines) {
+    linesText.textContent = lines;
+    hudState.lines = lines;
+  }
+  if (hudState.score !== score) {
+    scoreText.textContent = score;
+    hudState.score = score;
+  }
 }
 
 function updateOverlay() {
@@ -75,9 +100,8 @@ function updateOverlay() {
   }
 
   if (gameState.status === 'gameover') {
-    const levelInfo = `레벨 ${gameState.level}  ·  라인 ${gameState.lines}  ·  점수 ${gameState.score}`;
     overlayStatus.textContent = 'GAME OVER';
-    overlaySub.textContent = levelInfo;
+    overlaySub.textContent = `레벨 ${gameState.level}  ·  라인 ${gameState.lines}  ·  점수 ${gameState.score}`;
     overlayAction.textContent = '재시작';
     overlayAction.style.display = 'inline-block';
     return;
@@ -88,9 +112,36 @@ function updateOverlay() {
   overlayAction.style.display = 'none';
 }
 
+function hardRestart() {
+  gameState = createInitialState();
+  input.leftDown = false;
+  input.rightDown = false;
+  input.moveDir = 0;
+  input.holdStartedAt = 0;
+  input.holdLastMoveAt = 0;
+  input.softDrop = false;
+  overlay.classList.add('hidden');
+}
+
+function stopAllMovementInputs() {
+  input.moveDir = 0;
+  input.leftDown = false;
+  input.rightDown = false;
+  input.holdStartedAt = 0;
+  input.holdLastMoveAt = 0;
+  markPressed(ctrlLeft, false);
+  markPressed(ctrlRight, false);
+}
+
+function setSoftDropInput(enabled) {
+  input.softDrop = !!enabled;
+  setSoftDrop(gameState, !!enabled);
+  markPressed(ctrlSoft, !!enabled);
+}
+
 function moveHoldDirection(now) {
   if (gameState.status !== 'playing') {
-    input.moveDir = 0;
+    stopAllMovementInputs();
     return;
   }
 
@@ -99,6 +150,8 @@ function moveHoldDirection(now) {
     input.moveDir = 0;
     input.holdStartedAt = 0;
     input.holdLastMoveAt = 0;
+    markPressed(ctrlLeft, false);
+    markPressed(ctrlRight, false);
     return;
   }
 
@@ -107,6 +160,8 @@ function moveHoldDirection(now) {
     input.holdStartedAt = now;
     input.holdLastMoveAt = now;
     moveActivePiece(gameState, requestedDir < 0 ? 'left' : 'right');
+    markPressed(ctrlLeft, requestedDir < 0);
+    markPressed(ctrlRight, requestedDir > 0);
     return;
   }
 
@@ -150,6 +205,8 @@ function onKeyDown(event) {
       input.holdStartedAt = performance.now();
       input.holdLastMoveAt = input.holdStartedAt;
       input.moveDir = -1;
+      markPressed(ctrlLeft, true);
+      markPressed(ctrlRight, false);
     }
     event.preventDefault();
     return;
@@ -162,6 +219,8 @@ function onKeyDown(event) {
       input.holdStartedAt = performance.now();
       input.holdLastMoveAt = input.holdStartedAt;
       input.moveDir = 1;
+      markPressed(ctrlRight, true);
+      markPressed(ctrlLeft, false);
     }
     event.preventDefault();
     return;
@@ -169,8 +228,7 @@ function onKeyDown(event) {
 
   if (key === 'ArrowDown' || key === 'KeyS') {
     if (!input.softDrop) {
-      input.softDrop = true;
-      setSoftDrop(gameState, true);
+      setSoftDropInput(true);
     }
     event.preventDefault();
     return;
@@ -189,14 +247,18 @@ function onKeyDown(event) {
   if (key === 'Space') {
     if (!event.repeat) {
       hardDropPiece(gameState);
-      input.hardDropPressed = false;
     }
     event.preventDefault();
     return;
   }
 
   if (key === 'KeyP') {
-    togglePause(gameState);
+    if (togglePause(gameState)) {
+      markPressed(ctrlPause, gameState.status === 'paused');
+      if (gameState.status !== 'playing') {
+        stopAllMovementInputs();
+      }
+    }
     event.preventDefault();
     return;
   }
@@ -217,6 +279,7 @@ function onKeyUp(event) {
       input.holdStartedAt = 0;
       input.holdLastMoveAt = 0;
     }
+    markPressed(ctrlLeft, false);
     return;
   }
 
@@ -227,18 +290,19 @@ function onKeyUp(event) {
       input.holdStartedAt = 0;
       input.holdLastMoveAt = 0;
     }
+    markPressed(ctrlRight, false);
     return;
   }
 
   if (key === 'ArrowDown' || key === 'KeyS') {
-    input.softDrop = false;
-    setSoftDrop(gameState, false);
+    setSoftDropInput(false);
   }
 }
 
 function onOverlayAction() {
   if (gameState.status === 'paused') {
     togglePause(gameState);
+    markPressed(ctrlPause, false);
     return;
   }
 
@@ -247,15 +311,124 @@ function onOverlayAction() {
   }
 }
 
-function onPointerDownSoftDrop() {
-  input.softDrop = true;
-  setSoftDrop(gameState, true);
+function onTouchControlStart(button, handler) {
+  const pointerDownHandler = (event) => {
+    event.preventDefault();
+    markPressed(button, true);
+    handler('down');
+  };
+
+  const pointerUpHandler = () => {
+    markPressed(button, false);
+    handler('up');
+  };
+
+  button.addEventListener('pointerdown', pointerDownHandler, { passive: false });
+  button.addEventListener('pointerup', pointerUpHandler);
+  button.addEventListener('pointercancel', pointerUpHandler);
+  button.addEventListener('pointerleave', pointerUpHandler);
 }
 
-function onPointerUpSoftDrop() {
-  input.softDrop = false;
-  setSoftDrop(gameState, false);
-}
+onTouchControlStart(ctrlLeft, (phase) => {
+  if (phase === 'down') {
+    if (gameState.status !== 'playing') {
+      return;
+    }
+    if (!input.leftDown) {
+      input.leftDown = true;
+      moveActivePiece(gameState, 'left');
+      input.holdStartedAt = performance.now();
+      input.holdLastMoveAt = input.holdStartedAt;
+      input.moveDir = -1;
+      markPressed(ctrlRight, false);
+    }
+  } else {
+    input.leftDown = false;
+    if (input.moveDir === -1) {
+      input.moveDir = 0;
+      input.holdStartedAt = 0;
+      input.holdLastMoveAt = 0;
+    }
+    markPressed(ctrlLeft, false);
+  }
+});
+
+onTouchControlStart(ctrlRight, (phase) => {
+  if (phase === 'down') {
+    if (gameState.status !== 'playing') {
+      return;
+    }
+    if (!input.rightDown) {
+      input.rightDown = true;
+      moveActivePiece(gameState, 'right');
+      input.holdStartedAt = performance.now();
+      input.holdLastMoveAt = input.holdStartedAt;
+      input.moveDir = 1;
+      markPressed(ctrlLeft, false);
+    }
+  } else {
+    input.rightDown = false;
+    if (input.moveDir === 1) {
+      input.moveDir = 0;
+      input.holdStartedAt = 0;
+      input.holdLastMoveAt = 0;
+    }
+    markPressed(ctrlRight, false);
+  }
+});
+
+onTouchControlStart(ctrlRotate, (phase) => {
+  if (phase === 'down') {
+    const now = performance.now();
+    if (now >= input.rotateCooldownUntil) {
+      rotateActivePiece(gameState);
+      input.rotateCooldownUntil = now + ROTATE_DEBOUNCE_MS;
+    }
+  }
+});
+
+onTouchControlStart(ctrlSoft, (phase) => {
+  if (phase === 'down') {
+    setSoftDropInput(true);
+  } else {
+    setSoftDropInput(false);
+  }
+});
+
+ctrlHard.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  if (gameState.status !== 'playing') {
+    return;
+  }
+  markPressed(ctrlHard, true);
+  hardDropPiece(gameState);
+});
+
+ctrlHard.addEventListener('pointerup', () => {
+  markPressed(ctrlHard, false);
+});
+
+ctrlHard.addEventListener('pointercancel', () => {
+  markPressed(ctrlHard, false);
+});
+
+ctrlPause.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  markPressed(ctrlPause, true);
+});
+
+ctrlPause.addEventListener('pointerup', () => {
+  markPressed(ctrlPause, false);
+  if (togglePause(gameState)) {
+    if (gameState.status !== 'playing') {
+      stopAllMovementInputs();
+    }
+  }
+});
+
+ctrlPause.addEventListener('pointercancel', () => {
+  markPressed(ctrlPause, false);
+});
 
 restartBtn.addEventListener('click', hardRestart);
 overlayAction.addEventListener('click', onOverlayAction);

@@ -23,6 +23,14 @@
         </div>
         <canvas id="gameCanvas" aria-label="Tetris board"></canvas>
       </section>
+      <section class="control-bar" aria-label="Touch controls">
+        <button id="ctrlLeft" type="button" class="control-btn" data-action="moveLeft">◀</button>
+        <button id="ctrlRight" type="button" class="control-btn" data-action="moveRight">▶</button>
+        <button id="ctrlRotate" type="button" class="control-btn" data-action="rotate">⟳</button>
+        <button id="ctrlSoft" type="button" class="control-btn soft" data-action="softDrop">⇩</button>
+        <button id="ctrlHard" type="button" class="control-btn hard" data-action="hardDrop">⤓</button>
+        <button id="ctrlPause" type="button" class="control-btn pause" data-action="pause">Ⅱ/▶</button>
+      </section>
     </main>
     <script type="module" src="./src/main.js"></script>
   </body>

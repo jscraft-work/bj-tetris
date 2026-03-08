@@ -128,12 +128,11 @@ export function render(state, layout, ctx, now = Date.now()) {
       if (!color) {
         continue;
       }
-      drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, color);
+      drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, color, true);
     }
   }
 
   if (state.active) {
-    const rotating = state.vfx.rotateUntil > now;
     state.active.shape.forEach((row, py) => {
       row.forEach((cellOccupied, px) => {
         if (!cellOccupied) {
@@ -144,7 +143,7 @@ export function render(state, layout, ctx, now = Date.now()) {
         if (y < 0 || y >= VISIBLE_HEIGHT) {
           return;
         }
-        drawCell(ctx, x, y, cell, state.active.color, rotating);
+        drawCell(ctx, x, y, cell, state.active.color, true);
       });
     });
   }

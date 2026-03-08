@@ -43,6 +43,10 @@ const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
 const ctx = canvas.getContext('2d');
 const playLayout = document.querySelector('.play-layout');
+const hud = document.querySelector('.hud');
+const controlBar = document.querySelector('.control-bar');
+const nextPanel = document.querySelector('.next-panel');
+const shell = document.querySelector('.shell');
 
 const HOLD_DELAY_MS = 170;
 const HOLD_REPEAT_MS = 70;
@@ -73,7 +77,52 @@ function syncNextPanelOffset(layoutForOffset) {
   if (!playLayout || !layoutForOffset) {
     return;
   }
+
   playLayout.style.setProperty('--board-width', `${layoutForOffset.cssW}px`);
+  if (!shell || !hud || !controlBar) {
+    return;
+  }
+
+  const boardArea = playLayout.querySelector('.board-area');
+  const boardAreaRect = boardArea ? boardArea.getBoundingClientRect() : null;
+  const boardWidth = Math.ceil(
+    Number.isFinite(boardAreaRect && boardAreaRect.width)
+      ? boardAreaRect.width
+      : layoutForOffset.cssW,
+  );
+  const controlBarWidth = `${boardWidth}px`;
+  shell.style.setProperty('--control-bar-width', controlBarWidth);
+  controlBar.style.width = controlBarWidth;
+
+  if (!nextPanel) {
+    return;
+  }
+
+  const playLayoutRect = playLayout.getBoundingClientRect();
+  const nextPanelRect = nextPanel.getBoundingClientRect();
+  const nextCanvasRect = nextCanvas.getBoundingClientRect();
+  const minWidth = Math.ceil(layoutForOffset.cssW + nextPanelRect.width + 2);
+  const candidateFromPanel = Number.isFinite(nextPanelRect.right) && Number.isFinite(playLayoutRect.left)
+    ? nextPanelRect.right - playLayoutRect.left
+    : 0;
+  const candidateFromCanvas = Number.isFinite(nextCanvasRect.right) && Number.isFinite(playLayoutRect.left)
+    ? nextCanvasRect.right - playLayoutRect.left
+    : 0;
+  const width = Math.ceil(
+    Math.max(
+      Number.isFinite(playLayoutRect.width) ? playLayoutRect.width : 0,
+      Number.isFinite(playLayout.scrollWidth) ? playLayout.scrollWidth : 0,
+      candidateFromPanel,
+      candidateFromCanvas,
+      minWidth,
+    ) + 2,
+  );
+
+  if (width > 0) {
+    const widthPx = `${width}px`;
+    shell.style.setProperty('--hud-control-width', widthPx);
+    hud.style.width = widthPx;
+  }
 }
 
 function applyHud() {
@@ -631,6 +680,10 @@ function onStartClick() {
   hardRestart();
 }
 
+function scheduleLayoutSync() {
+  requestAnimationFrame(() => requestAnimationFrame(() => syncNextPanelOffset(layout)));
+}
+
 overlayAction.addEventListener('click', onOverlayAction);
 overlayAction.addEventListener('pointerdown', (event) => {
   event.preventDefault();
@@ -643,14 +696,22 @@ window.addEventListener('keyup', onKeyUp);
 window.addEventListener('resize', () => {
   layout = resizeCanvas(canvas);
   nextLayout = resizeNextCanvas(nextCanvas);
-  syncNextPanelOffset(layout);
+  scheduleLayoutSync();
 });
+if (typeof ResizeObserver !== 'undefined' && playLayout && nextPanel) {
+  const layoutSyncObserver = new ResizeObserver(() => {
+    scheduleLayoutSync();
+  });
+  layoutSyncObserver.observe(playLayout);
+  layoutSyncObserver.observe(nextPanel);
+  layoutSyncObserver.observe(nextCanvas);
+}
 
 applyHud();
 updateOverlay();
 layout = resizeCanvas(canvas);
 nextLayout = resizeNextCanvas(nextCanvas);
-syncNextPanelOffset(layout);
+scheduleLayoutSync();
 requestAnimationFrame((time) => {
   lastTime = time;
   gameLoop(time);

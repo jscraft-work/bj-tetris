@@ -20,24 +20,27 @@ body {
 }
 
 .shell {
+  --hud-control-width: 280px;
+  --control-bar-width: 280px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  width: min(100vw, 520px);
+  width: min(100vw, 420px);
   padding: 12px;
 }
 
 .hud {
-  width: 100%;
+  width: min(100%, var(--hud-control-width));
+  margin: 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 10px;
+  gap: 4px;
+  padding: 4px 6px;
   border: 1px solid #3a4e7a;
   border-radius: 10px;
   background: rgba(6, 10, 20, 0.7);
-  font-size: 13px;
+  font-size: 10px;
 }
 
 .hud div,
@@ -47,9 +50,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 8px;
+  padding: 3px 5px;
   border-radius: 8px;
   background: rgba(15, 24, 48, 0.7);
+  line-height: 1.2;
 }
 
 #restartBtn {
@@ -73,13 +77,15 @@ body {
 }
 
 .play-layout {
-  --board-width: 220px;
+  --board-width: 200px;
+  --next-spacing: 4px;
   width: var(--board-width);
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  margin: 0 auto;
+  margin: 0;
   overflow: visible;
+  column-gap: var(--next-spacing);
 }
 
 .play-layout > .board-area,
@@ -99,8 +105,8 @@ body {
   width: auto;
   display: grid;
   place-items: center;
-  gap: 3px;
-  padding: 3px 4px 4px;
+  gap: 2px;
+  padding: 2px 3px 3px;
   border: 1px solid #3a4e7a;
   border-radius: 10px;
   background: rgba(6, 10, 20, 0.7);
@@ -108,15 +114,15 @@ body {
 
 .next-panel h2 {
   margin: 0;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: #bfd3ff;
 }
 
 .next-panel #nextCanvas {
-  width: 76px;
-  height: 76px;
+  width: 58px;
+  height: 58px;
   border-radius: 6px;
   border: 1px solid #5b6f9f;
   background: #070f20;
@@ -124,12 +130,16 @@ body {
 
 @media (max-width: 640px) {
   .next-panel #nextCanvas {
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
   }
 
   .next-panel h2 {
-    font-size: 9px;
+    font-size: 8px;
+  }
+
+  .play-layout {
+    --next-spacing: 3px;
   }
 }
 
@@ -163,11 +173,12 @@ body {
 }
 
 .control-bar {
-  width: 100%;
+  width: min(100%, var(--control-bar-width, var(--hud-control-width)));
+  margin: 0;
   display: grid;
-  gap: 8px;
+  gap: 4px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 4px;
+  margin-top: 1px;
 }
 
 .control-bar .control-btn:nth-child(4),
@@ -177,8 +188,8 @@ body {
 }
 
 .control-btn {
-  min-height: 56px;
-  font-size: 18px;
+  min-height: 38px;
+  font-size: 16px;
   border: 1px solid #7a8bbf;
   color: #f0f4ff;
   cursor: pointer;
@@ -214,7 +225,38 @@ body {
 }
 
 @media (max-width: 430px) {
+  body {
+    place-items: start center;
+  }
+
+  .shell {
+    width: min(100%, 100vw);
+    max-width: 100%;
+    padding: 8px;
+  }
+
   .control-bar {
-    gap: 6px;
+    gap: 4px;
+  }
+
+  .control-btn {
+    min-height: 34px;
+    font-size: 15px;
+  }
+
+  .hud {
+    font-size: 9px;
+    padding: 3px 5px;
+  }
+
+  .hud div,
+  #restartBtn,
+  #overlayAction,
+  .control-btn {
+    padding: 2px 4px;
+  }
+
+  .control-bar {
+    margin-top: 0;
   }
 }

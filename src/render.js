@@ -8,10 +8,16 @@ import {
 import { getGhostPiece } from './state.js';
 
 function getBoardBounds() {
-  const shell = document.querySelector('.board-area');
+  const shell = document.querySelector('.shell');
+  const nextPanel = document.querySelector('.next-panel');
   const shellW = shell ? shell.clientWidth : window.innerWidth;
+  const nextPanelRect = nextPanel ? nextPanel.getBoundingClientRect() : null;
+  const nextPanelW = Number.isFinite(nextPanelRect && nextPanelRect.width)
+    ? Math.ceil(nextPanelRect.width)
+    : 0;
+  const boardReserve = Math.max(0, shellW - 20 - nextPanelW);
   const shellH = window.innerHeight - 220;
-  const maxW = Math.max(220, Math.floor(shellW - 20));
+  const maxW = Math.max(220, Math.floor(boardReserve));
   const maxH = Math.max(240, Math.floor(shellH));
   const cellByWidth = Math.floor(maxW / BOARD_WIDTH);
   const cellByHeight = Math.floor(maxH / VISIBLE_HEIGHT);

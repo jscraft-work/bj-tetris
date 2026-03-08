@@ -20,10 +20,163 @@ const SFX_DEFINITIONS = {
 
 let ctx = null;
 let enabled = true;
+let musicEnabled = true;
 const lastPlayed = new Map();
+let bgmMode = 'stopped';
+let bgmTrackAudio = null;
+let bgmLastTrackIndex = -1;
+let bgmTrackErrorStreak = 0;
+let bgmTrackListReady = false;
+let bgmTrackListLoading = null;
+let bgmTrackList = [];
 
-function nowMs() {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+const BGM_TRACK_MANIFEST_URL = './assets/bgm/manifest.json';
+const BGM_TRACK_VOLUME = 0.28;
+function normalizeTrackPath(candidate) {
+  const raw = String(candidate || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (/^(https?:)?\/\//.test(raw) || raw.startsWith('http:') || raw.startsWith('https:')) {
+    return raw;
+  }
+
+  if (raw.startsWith('./') || raw.startsWith('../') || raw.startsWith('/')) {
+    return raw;
+  }
+
+  return `./assets/bgm/${raw}`;
+}
+
+function loadBgmTrackList() {
+  if (bgmTrackListReady) {
+    return Promise.resolve(bgmTrackList);
+  }
+
+  if (bgmTrackListLoading) {
+    return bgmTrackListLoading;
+  }
+
+  bgmTrackListLoading = (async () => {
+    try {
+      const response = await fetch(BGM_TRACK_MANIFEST_URL, { cache: 'no-store' });
+      if (!response.ok) {
+        bgmTrackList = [];
+        return;
+      }
+
+      const payload = await response.json();
+      const list = Array.isArray(payload) ? payload : payload.tracks;
+      if (!Array.isArray(list)) {
+        bgmTrackList = [];
+        return;
+      }
+
+      const next = [];
+      for (const item of list) {
+        const path = normalizeTrackPath(item);
+        if (path && !next.includes(path)) {
+          next.push(path);
+        }
+      }
+      bgmTrackList = next;
+    } catch (error) {
+      bgmTrackList = [];
+    } finally {
+      bgmTrackListReady = true;
+      bgmTrackListLoading = null;
+    }
+  })();
+
+  return bgmTrackListLoading;
+}
+
+function createTrackBgmAudio() {
+  if (bgmTrackAudio) {
+    return bgmTrackAudio;
+  }
+
+  bgmTrackAudio = new Audio();
+  bgmTrackAudio.loop = false;
+  bgmTrackAudio.preload = 'auto';
+  bgmTrackAudio.volume = BGM_TRACK_VOLUME;
+  bgmTrackAudio.crossOrigin = 'anonymous';
+  bgmTrackAudio.addEventListener('ended', () => {
+    if (bgmMode !== 'track') {
+      return;
+    }
+    startTrackMusic();
+  });
+  bgmTrackAudio.addEventListener('error', () => {
+    if (bgmMode !== 'track') {
+      return;
+    }
+    bgmTrackErrorStreak += 1;
+    if (bgmTrackErrorStreak >= Math.max(1, bgmTrackList.length)) {
+      stopTrackMusic();
+      bgmTrackErrorStreak = 0;
+      bgmMode = 'stopped';
+      return;
+    }
+    startTrackMusic(true);
+  });
+
+  return bgmTrackAudio;
+}
+
+function stopTrackMusic() {
+  if (!bgmTrackAudio) {
+    return;
+  }
+  bgmTrackAudio.pause();
+  bgmTrackAudio.currentTime = 0;
+}
+
+function getRandomTrackIndex() {
+  const total = bgmTrackList.length;
+  if (!total) {
+    return -1;
+  }
+  if (total === 1) {
+    return 0;
+  }
+
+  let nextIndex = Math.floor(Math.random() * total);
+  if (total > 1 && nextIndex === bgmLastTrackIndex) {
+    nextIndex = (nextIndex + 1) % total;
+  }
+  bgmLastTrackIndex = nextIndex;
+  return nextIndex;
+}
+
+function startTrackMusic(forcePlay = false) {
+  if (!bgmTrackList.length || !musicEnabled || !enabled) {
+    return;
+  }
+
+  const audio = createTrackBgmAudio();
+  if (!audio) {
+    return;
+  }
+
+  if (!forcePlay && bgmMode === 'track' && !audio.paused) {
+    return;
+  }
+
+  bgmMode = 'track';
+  bgmTrackErrorStreak = 0;
+  const index = getRandomTrackIndex();
+  if (index < 0) {
+    return;
+  }
+  audio.volume = BGM_TRACK_VOLUME;
+  audio.src = bgmTrackList[index];
+  audio.currentTime = 0;
+  audio.play().catch(() => {
+    stopTrackMusic();
+    bgmMode = 'stopped';
+  });
 }
 
 function ensureContext() {
@@ -51,12 +204,62 @@ export function setAudioEnabled(isEnabled) {
   enabled = !!isEnabled;
 }
 
+export function setMusicEnabled(isEnabled) {
+  musicEnabled = !!isEnabled;
+  if (!musicEnabled) {
+    stopBackgroundMusic();
+    bgmMode = 'stopped';
+  }
+}
+
+export function isMusicEnabled() {
+  return musicEnabled;
+}
+
 export function isAudioEnabled() {
   return enabled;
 }
 
 export function canPlayAudio() {
   return !!ensureContext();
+}
+
+function nowMs() {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+export function startBackgroundMusic() {
+  if (!musicEnabled || !enabled) {
+    return;
+  }
+
+  if (!bgmTrackListReady) {
+    loadBgmTrackList()
+      .then(() => {
+        if (!musicEnabled || !enabled) {
+          return;
+        }
+        if (!bgmTrackList.length) {
+          return;
+        }
+        startTrackMusic();
+      })
+      .catch(() => {
+        bgmTrackListReady = true;
+        bgmTrackList = [];
+      });
+    return;
+  }
+
+  if (bgmTrackList.length > 0) {
+    startTrackMusic();
+    return;
+  }
+}
+
+export function stopBackgroundMusic() {
+  stopTrackMusic();
+  bgmMode = 'stopped';
 }
 
 function playTone(def) {

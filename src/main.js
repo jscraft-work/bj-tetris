@@ -11,6 +11,8 @@ import {
 } from './state.js';
 import {
   initAudio,
+  startBackgroundMusic,
+  stopBackgroundMusic,
   play,
   isAudioEnabled,
 } from './services/audio.js';
@@ -109,10 +111,16 @@ function setSoftDropInput(enabled) {
 
 function ensureAudioReady() {
   if (pointerLock) {
+    if (gameState.status === 'playing') {
+      startBackgroundMusic();
+    }
     return;
   }
   pointerLock = true;
   initAudio();
+  if (gameState.status === 'playing') {
+    startBackgroundMusic();
+  }
 }
 
 function updateOverlay() {
@@ -162,6 +170,7 @@ function hardRestart() {
   gameState = createInitialState();
   ensureAudioReady();
   gameState.status = 'playing';
+  startBackgroundMusic();
   input.leftDown = false;
   input.rightDown = false;
   input.moveDir = 0;
@@ -179,6 +188,7 @@ function startGame() {
 
   gameState.status = 'playing';
   ensureAudioReady();
+  startBackgroundMusic();
   play(SFX_KEYS.START);
   overlay.classList.add('hidden');
   overlayAction.textContent = '';
@@ -191,7 +201,9 @@ function onOverlayAction() {
     return;
   }
   if (gameState.status === 'paused') {
-    togglePause(gameState);
+    if (togglePause(gameState)) {
+      startBackgroundMusic();
+    }
     return;
   }
   if (gameState.status === 'gameover') {
@@ -265,12 +277,15 @@ function handleEvents(events) {
         if (isVibrationEnabled() && canVibrate()) {
           pulse(35);
         }
+        stopBackgroundMusic();
         break;
       case SFX_KEYS.PAUSE:
         play(SFX_KEYS.PAUSE);
+        stopBackgroundMusic();
         break;
       case SFX_KEYS.RESUME:
         play(SFX_KEYS.RESUME);
+        startBackgroundMusic();
         break;
       case SFX_KEYS.RESTART:
         play(SFX_KEYS.RESTART);
@@ -324,6 +339,12 @@ function moveHoldDirection(now) {
 function gameLoop(time) {
   const delta = time - lastTime;
   lastTime = time;
+
+  if (gameState.status === 'playing') {
+    startBackgroundMusic();
+  } else {
+    stopBackgroundMusic();
+  }
 
   moveHoldDirection(time);
   stepPhysics(gameState, Number.isFinite(delta) ? delta : 0);
@@ -409,6 +430,11 @@ function onKeyDown(event) {
     ensureAudioReady();
     if (togglePause(gameState)) {
       markPressed(ctrlPause, gameState.status === 'paused');
+      if (gameState.status === 'playing') {
+        startBackgroundMusic();
+      } else {
+        stopBackgroundMusic();
+      }
       if (gameState.status !== 'playing') {
         stopAllMovementInputs();
       }
@@ -566,6 +592,11 @@ ctrlPause.addEventListener('pointerdown', (event) => {
 ctrlPause.addEventListener('pointerup', () => {
   markPressed(ctrlPause, false);
   if (togglePause(gameState)) {
+    if (gameState.status === 'playing') {
+      startBackgroundMusic();
+    } else {
+      stopBackgroundMusic();
+    }
     if (gameState.status !== 'playing') {
       stopAllMovementInputs();
     }

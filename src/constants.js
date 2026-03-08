@@ -9,7 +9,9 @@ export const VFX_ROTATE_MS = 140;
 export const VFX_LINE_CLEAR_MS = 110;
 export const VFX_IMPACT_MS = 100;
 
-export const PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+export const NUMBERBLOCK_TYPES = ['1', '2', '3', '4'];
+export const PIECE_TYPES = [...STANDARD_PIECE_TYPES, ...NUMBERBLOCK_TYPES];
 
 export const PIECE_SHAPES = {
   I: [[1, 1, 1, 1]],
@@ -37,6 +39,10 @@ export const PIECE_SHAPES = {
     [1, 1, 0],
     [0, 1, 1],
   ],
+  1: [[1]],
+  2: [[1], [1]],
+  3: [[1], [1], [1]],
+  4: [[1], [1], [1], [1]],
 };
 
 export const PIECE_COLOR = {
@@ -47,6 +53,17 @@ export const PIECE_COLOR = {
   S: '#40c4aa',
   T: '#b84dff',
   Z: '#ff3f6a',
+  1: '#4fa8ff',
+  2: '#7ed957',
+  3: '#f5b400',
+  4: '#ff6aa2',
+};
+
+export const NUMBERBLOCKS_IMAGES = {
+  1: '/assets/blocks/1.png',
+  2: '/assets/blocks/2.png',
+  3: '/assets/blocks/3.png',
+  4: '/assets/blocks/4.png',
 };
 
 export const SCORE_BY_LINES = [0, 100, 300, 500, 800];

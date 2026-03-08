@@ -6,6 +6,7 @@ import {
 } from './render.js';
 import {
   createInitialState,
+  setNumberBlocksEnabled,
   stepPhysics,
   moveActivePiece,
   rotateActivePiece,
@@ -41,6 +42,7 @@ const ctrlRotate = document.getElementById('ctrlRotate');
 const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
+const toggleNumberBlocksBtn = document.getElementById('toggleNumberBlocksBtn');
 const ctx = canvas.getContext('2d');
 const playLayout = document.querySelector('.play-layout');
 const hud = document.querySelector('.hud');
@@ -52,7 +54,10 @@ const HOLD_DELAY_MS = 170;
 const HOLD_REPEAT_MS = 70;
 const ROTATE_DEBOUNCE_MS = 120;
 
-let gameState = createInitialState();
+const NUMBER_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
+let gameState = createInitialState({
+  numberBlocksEnabled: readNumberBlockSetting(),
+});
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
 let nextLayout = resizeNextCanvas(nextCanvas);
@@ -72,6 +77,25 @@ const hudState = {
   lines: '',
   score: '',
 };
+let numberBlocksEnabled = gameState.numberBlocksEnabled;
+
+function readNumberBlockSetting() {
+  try {
+    const value = localStorage.getItem(NUMBER_BLOCKS_STORAGE_KEY);
+    if (value === null) {
+      return true;
+    }
+    return value === 'true';
+  } catch {
+    return true;
+  }
+}
+
+function persistNumberBlockSetting(value) {
+  try {
+    localStorage.setItem(NUMBER_BLOCKS_STORAGE_KEY, String(!!value));
+  } catch {}
+}
 
 function syncNextPanelOffset(layoutForOffset) {
   if (!playLayout || !layoutForOffset) {
@@ -146,6 +170,9 @@ function applyHud() {
   if (hudState.score !== score) {
     scoreText.textContent = score;
     hudState.score = score;
+  }
+  if (toggleNumberBlocksBtn) {
+    toggleNumberBlocksBtn.textContent = `NUMBER ${numberBlocksEnabled ? 'ON' : 'OFF'}`;
   }
 }
 
@@ -231,7 +258,9 @@ function updateOverlay() {
 }
 
 function hardRestart() {
-  gameState = createInitialState();
+  gameState = createInitialState({
+    numberBlocksEnabled,
+  });
   ensureAudioReady();
   gameState.status = 'playing';
   startBackgroundMusic();
@@ -273,6 +302,13 @@ function onOverlayAction() {
   if (gameState.status === 'gameover') {
     hardRestart();
   }
+}
+
+function toggleNumberBlocks() {
+  numberBlocksEnabled = !numberBlocksEnabled;
+  setNumberBlocksEnabled(gameState, numberBlocksEnabled);
+  persistNumberBlockSetting(numberBlocksEnabled);
+  applyHud();
 }
 
 function handleEvents(events) {
@@ -691,6 +727,12 @@ overlayAction.addEventListener('pointerdown', (event) => {
 });
 restartBtn.addEventListener('click', onStartClick);
 restartBtn.addEventListener('pointerdown', onStartClick);
+if (toggleNumberBlocksBtn) {
+  toggleNumberBlocksBtn.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    toggleNumberBlocks();
+  });
+}
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 window.addEventListener('resize', () => {

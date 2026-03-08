@@ -2,10 +2,49 @@ import {
   BOARD_WIDTH,
   VISIBLE_HEIGHT,
   HIDDEN_HEIGHT,
+  NUMBERBLOCKS_IMAGES,
   VFX_LINE_CLEAR_MS,
   VFX_IMPACT_MS,
 } from './constants.js';
 import { getGhostPiece } from './state.js';
+
+function isNumberBlockType(type) {
+  return !!NUMBERBLOCKS_IMAGES[String(type)];
+}
+
+const pieceImageCache = new Map();
+
+function getPieceImage(type) {
+  const src = NUMBERBLOCKS_IMAGES[String(type)];
+  if (!src) {
+    return null;
+  }
+
+  const key = String(type);
+  if (pieceImageCache.has(key)) {
+    return pieceImageCache.get(key);
+  }
+
+  const img = new Image();
+  img.src = src;
+  pieceImageCache.set(key, img);
+  return img;
+}
+
+function getCellMeta(cell) {
+  if (typeof cell === 'object' && cell !== null) {
+    return {
+      color: cell.color || '#ffffff',
+      type: cell.type || null,
+      pieceId: cell.pieceId || null,
+    };
+  }
+  return {
+    color: typeof cell === 'string' ? cell : '#ffffff',
+    type: null,
+    pieceId: null,
+  };
+}
 
 function getBoardBounds() {
   const shell = document.querySelector('.shell');
@@ -92,14 +131,66 @@ function drawGrid(ctx, layout) {
   }
 }
 
-function drawCell(ctx, x, y, size, color, glow = false, alpha = 1) {
+function drawCell(ctx, x, y, size, color, glow = false, alpha = 1, options = {}) {
+  const { useImage = false, type = null } = options;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = color;
-  ctx.fillRect(x * size, y * size, size, size);
+  if (useImage && isNumberBlockType(type)) {
+    const img = getPieceImage(type);
+    if (img && img.complete && img.naturalWidth > 0) {
+      const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
+      const adjustedW = ratio > 1 ? Math.max(size * ratio, size) : size;
+      const adjustedH = ratio > 1 ? size : Math.max(size / ratio, size);
+      const drawW = Math.min(size, adjustedW);
+      const drawH = Math.min(size, adjustedH);
+      const offsetX = x * size + (size - drawW) / 2;
+      const offsetY = y * size + (size - drawH) / 2;
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * size, y * size, size, size);
+    }
+  } else {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * size, y * size, size, size);
+  }
   if (glow) {
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.fillRect(x * size + size * 0.18, y * size + size * 0.18, size * 0.64, size * 0.64);
+  }
+  ctx.restore();
+}
+
+function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, rotate = false) {
+  const img = getPieceImage(type);
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (rotate) {
+      ctx.translate(x + width / 2, y + height / 2);
+      ctx.rotate(Math.PI / 2);
+      const renderW = height;
+      const renderH = width;
+      ctx.drawImage(img, -renderW / 2, -renderH / 2, renderW, renderH);
+    } else {
+      ctx.drawImage(img, x, y, width, height);
+    }
+
+    if (glow) {
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.fillRect(x + width * 0.18, y + height * 0.18, width * 0.64, height * 0.64);
+    }
+    ctx.restore();
+    return;
+  }
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, width, height);
+  if (glow) {
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillRect(x + width * 0.18, y + height * 0.18, width * 0.64, height * 0.64);
   }
   ctx.restore();
 }
@@ -153,6 +244,24 @@ function drawGhostPiece(state, ctx, layout) {
   }
 
   const { cell } = layout;
+  const ghostMeta = getCellMeta(ghost);
+  if (isNumberBlockType(ghostMeta.type)) {
+    const isHorizontal = ghost.shape[0].length > ghost.shape.length;
+    drawPieceImage(
+      ctx,
+      ghost.x * cell,
+      (ghost.y - HIDDEN_HEIGHT) * cell,
+      ghost.shape[0].length * cell,
+      ghost.shape.length * cell,
+      ghostMeta.color,
+      ghostMeta.type,
+      0.32,
+      true,
+      isHorizontal,
+    );
+    return;
+  }
+
   ghost.shape.forEach((row, py) => {
     row.forEach((cellOccupied, px) => {
       if (!cellOccupied) {
@@ -163,7 +272,7 @@ function drawGhostPiece(state, ctx, layout) {
       if (y < 0 || y >= VISIBLE_HEIGHT) {
         return;
       }
-      drawCell(ctx, x, y, cell, ghost.color, true, 0.32);
+      drawCell(ctx, x, y, cell, ghostMeta.color, true, 0.32);
     });
   });
 }
@@ -187,18 +296,35 @@ function drawNextPiece(state, ctx, layout) {
   const shapeHeight = piece.shape.length;
   const pieceOffsetX = Math.floor((cssW - shapeWidth * cell) / 2);
   const pieceOffsetY = Math.floor((cssH - shapeHeight * cell) / 2);
+  const pieceMeta = getCellMeta(piece);
 
   ctx.save();
   ctx.translate(pieceOffsetX, pieceOffsetY);
 
-  piece.shape.forEach((row, py) => {
-    row.forEach((cellOccupied, px) => {
-      if (!cellOccupied) {
-        return;
-      }
-      drawCell(ctx, px, py, cell, piece.color, false, 1);
+  if (isNumberBlockType(pieceMeta.type)) {
+    const isHorizontal = piece.shape[0].length > piece.shape.length;
+    drawPieceImage(
+      ctx,
+      0,
+      0,
+      shapeWidth * cell,
+      shapeHeight * cell,
+      pieceMeta.color,
+      pieceMeta.type,
+      1,
+      false,
+      isHorizontal,
+    );
+  } else {
+    piece.shape.forEach((row, py) => {
+      row.forEach((cellOccupied, px) => {
+        if (!cellOccupied) {
+          return;
+        }
+        drawCell(ctx, px, py, cell, pieceMeta.color, false, 1);
+      });
     });
-  });
+  }
   ctx.restore();
 }
 
@@ -226,30 +352,49 @@ export function render(state, layout, ctx, now = Date.now()) {
 
   for (let y = HIDDEN_HEIGHT; y < state.board.length; y += 1) {
     for (let x = 0; x < BOARD_WIDTH; x += 1) {
-      const color = state.board[y][x];
-      if (!color) {
+      const boardCell = state.board[y][x];
+      if (!boardCell) {
         continue;
       }
-      drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, color, true);
+      const boardMeta = getCellMeta(boardCell);
+      drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true);
     }
   }
 
   if (state.active) {
     drawGhostPiece(state, ctx, layout);
+    const activeMeta = getCellMeta(state.active);
 
-    state.active.shape.forEach((row, py) => {
-      row.forEach((cellOccupied, px) => {
-        if (!cellOccupied) {
-          return;
-        }
-        const y = state.active.y + py - HIDDEN_HEIGHT;
-        const x = state.active.x + px;
-        if (y < 0 || y >= VISIBLE_HEIGHT) {
-          return;
-        }
-        drawCell(ctx, x, y, cell, state.active.color, true);
+    if (isNumberBlockType(activeMeta.type)) {
+      const isHorizontal = state.active.shape[0].length > state.active.shape.length;
+      drawPieceImage(
+        ctx,
+        state.active.x * cell,
+        (state.active.y - HIDDEN_HEIGHT) * cell,
+        state.active.shape[0].length * cell,
+        state.active.shape.length * cell,
+        activeMeta.color,
+        activeMeta.type,
+        1,
+        true,
+        isHorizontal,
+      );
+    }
+    else {
+      state.active.shape.forEach((row, py) => {
+        row.forEach((cellOccupied, px) => {
+          if (!cellOccupied) {
+            return;
+          }
+          const y = state.active.y + py - HIDDEN_HEIGHT;
+          const x = state.active.x + px;
+          if (y < 0 || y >= VISIBLE_HEIGHT) {
+            return;
+          }
+          drawCell(ctx, x, y, cell, activeMeta.color, true);
+        });
       });
-    });
+    }
   }
 
   // vfx removed to avoid residual color artifacts on empty cells

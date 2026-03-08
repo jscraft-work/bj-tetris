@@ -45,6 +45,7 @@ body {
 
 .hud div,
 #restartBtn,
+#toggleNumberBlocksBtn,
 #overlayAction,
 .control-btn {
   display: inline-flex;
@@ -61,6 +62,14 @@ body {
   border: 1px solid #5f74a6;
   color: #ecf0ff;
   background: linear-gradient(180deg, #243b6f, #12214b);
+  cursor: pointer;
+}
+
+#toggleNumberBlocksBtn {
+  grid-column: span 2;
+  border: 1px solid #6f87bf;
+  color: #ecf0ff;
+  background: linear-gradient(180deg, #1d3f78, #11234b);
   cursor: pointer;
 }
 

@@ -3,6 +3,8 @@ import {
   BOARD_HEIGHT,
   HIDDEN_HEIGHT,
   PIECE_TYPES,
+  STANDARD_PIECE_TYPES,
+  NUMBERBLOCK_TYPES,
   PIECE_SHAPES,
   PIECE_COLOR,
   BASE_DROP_MS,
@@ -14,17 +16,38 @@ import {
   VFX_IMPACT_MS,
 } from './constants.js';
 
+let pieceSerial = 1;
+
 function cloneShape(shape) {
   return shape.map((row) => row.slice());
+}
+
+function getNextPieceSerial() {
+  const id = pieceSerial;
+  pieceSerial += 1;
+  return id;
+}
+
+function getRandomItem(items) {
+  const index = Math.floor(Math.random() * items.length);
+  return items[index];
+}
+
+function getAvailablePieceTypes(includeNumberBlocks) {
+  return includeNumberBlocks ? PIECE_TYPES : STANDARD_PIECE_TYPES;
+}
+
+function isNumberBlockType(type) {
+  return NUMBERBLOCK_TYPES.includes(String(type));
 }
 
 export function makeBoard() {
   return Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0));
 }
 
-function randomPieceType() {
-  const index = Math.floor(Math.random() * PIECE_TYPES.length);
-  return PIECE_TYPES[index];
+function randomPieceType(includeNumberBlocks = true) {
+  const pieceTypes = getAvailablePieceTypes(includeNumberBlocks);
+  return getRandomItem(pieceTypes);
 }
 
 function rotateShapeCW(shape) {
@@ -48,8 +71,8 @@ function computeDropMs(level) {
   return Math.max(MIN_DROP_MS, Math.floor(BASE_DROP_MS * Math.pow(0.9, level - 1)));
 }
 
-function createPiece(type) {
-  const pieceType = type || randomPieceType();
+function createPiece(type, includeNumberBlocks = true) {
+  const pieceType = String(type || randomPieceType(includeNumberBlocks));
   const shape = cloneShape(PIECE_SHAPES[pieceType]);
   const width = shape[0].length;
 
@@ -57,9 +80,50 @@ function createPiece(type) {
     type: pieceType,
     shape,
     color: PIECE_COLOR[pieceType],
+    pieceId: getNextPieceSerial(),
     x: Math.floor((BOARD_WIDTH - width) / 2),
     y: 0,
   };
+}
+
+function replaceWithRegularPiece(piece) {
+  const pieceType = String(randomPieceType(false));
+  const shape = cloneShape(PIECE_SHAPES[pieceType]);
+  const width = shape[0].length;
+
+  return {
+    ...piece,
+    type: pieceType,
+    shape,
+    color: PIECE_COLOR[pieceType],
+    pieceId: getNextPieceSerial(),
+    x: Math.min(Math.max(0, piece.x), BOARD_WIDTH - width),
+  };
+}
+
+export function setNumberBlocksEnabled(state, enabled) {
+  const nextValue = !!enabled;
+  if (state.numberBlocksEnabled === nextValue) {
+    return;
+  }
+  state.numberBlocksEnabled = nextValue;
+
+  if (!nextValue) {
+    if (state.active && isNumberBlockType(state.active.type)) {
+      const convertedActive = replaceWithRegularPiece(state.active);
+      if (canPlacePiece(state, convertedActive)) {
+        state.active = convertedActive;
+      }
+    }
+    if (state.next && isNumberBlockType(state.next.type)) {
+      state.next = createPiece(undefined, false);
+    }
+    return;
+  }
+
+  if (!state.next) {
+    state.next = createPiece(undefined, state.numberBlocksEnabled);
+  }
 }
 
 function getDropMsForState(state) {
@@ -119,12 +183,15 @@ function setImpactVfx(state) {
   state.vfx.impactUntil = Date.now() + VFX_IMPACT_MS;
 }
 
-export function createInitialState() {
+export function createInitialState(options = {}) {
+  const numberBlocksEnabled = options.numberBlocksEnabled !== false;
+  pieceSerial = 1;
   return {
     status: 'idle',
     board: makeBoard(),
-    active: createPiece(),
-    next: createPiece(),
+    numberBlocksEnabled,
+    active: createPiece(undefined, numberBlocksEnabled),
+    next: createPiece(undefined, numberBlocksEnabled),
     score: 0,
     lines: 0,
     level: 1,
@@ -215,7 +282,11 @@ function lockActivePiece(state) {
       if (y < HIDDEN_HEIGHT) {
         overflow = true;
       }
-      state.board[y][x] = piece.color;
+      state.board[y][x] = {
+        color: piece.color,
+        type: piece.type,
+        pieceId: piece.pieceId,
+      };
     });
   });
 
@@ -263,7 +334,7 @@ function clearFullLines(state) {
 
 export function spawnNextPiece(state) {
   state.active = state.next;
-  state.next = createPiece();
+  state.next = createPiece(undefined, state.numberBlocksEnabled);
   emitEvent(state, 'piece_spawned');
   if (!canPlacePiece(state, state.active)) {
     state.status = 'gameover';

@@ -13,6 +13,7 @@ function isNumberBlockType(type) {
 }
 
 const pieceImageCache = new Map();
+const pieceRotatedImageCache = new Map();
 const ANDROID_ASSET_PREFIX = 'file:///android_asset/';
 
 function getPieceImageCandidates(type) {
@@ -64,6 +65,28 @@ function getPieceImage(type) {
   tryNextSource();
   pieceImageCache.set(key, img);
   return img;
+}
+
+function getRotatedPieceImage(type) {
+  const key = `${String(type)}:rot90`;
+  if (pieceRotatedImageCache.has(key)) {
+    return pieceRotatedImageCache.get(key);
+  }
+
+  const img = getPieceImage(type);
+  if (!img || !img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0) {
+    return null;
+  }
+
+  const rotated = document.createElement('canvas');
+  rotated.width = img.naturalHeight;
+  rotated.height = img.naturalWidth;
+  const rctx = rotated.getContext('2d');
+  rctx.translate(rotated.width / 2, rotated.height / 2);
+  rctx.rotate(Math.PI / 2);
+  rctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2, img.naturalWidth, img.naturalHeight);
+  pieceRotatedImageCache.set(key, rotated);
+  return rotated;
 }
 
 function getCellMeta(cell) {
@@ -197,19 +220,11 @@ function drawCell(ctx, x, y, size, color, glow = false, alpha = 1, options = {})
 }
 
 function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, rotate = false) {
-  const img = getPieceImage(type);
-  if (img && img.complete && img.naturalWidth > 0) {
+  const img = rotate ? getRotatedPieceImage(type) : getPieceImage(type);
+  if (img && img.width > 0 && img.height > 0) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    if (rotate) {
-      ctx.translate(x + width / 2, y + height / 2);
-      ctx.rotate(Math.PI / 2);
-      const renderW = height;
-      const renderH = width;
-      ctx.drawImage(img, -renderW / 2, -renderH / 2, renderW, renderH);
-    } else {
-      ctx.drawImage(img, x, y, width, height);
-    }
+    ctx.drawImage(img, x, y, width, height);
 
     if (glow) {
       ctx.fillStyle = 'rgba(255,255,255,0.22)';

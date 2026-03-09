@@ -107,6 +107,8 @@ body {
   position: relative;
   display: grid;
   place-items: center;
+  touch-action: none;
+  -ms-touch-action: none;
 }
 
 .next-panel {

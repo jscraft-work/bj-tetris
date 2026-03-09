@@ -52,9 +52,10 @@ const nextPanel = document.querySelector('.next-panel');
 const shell = document.querySelector('.shell');
 
 const HOLD_DELAY_MS = 170;
-const HOLD_REPEAT_MS = 70;
+const HOLD_REPEAT_MS = 90;
 const ROTATE_DEBOUNCE_MS = 120;
 const BOARD_TOUCH_THRESHOLD = 14;
+const BOARD_TOUCH_UP_HARD_DROP_MIN = 28;
 
 const NUMBER_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
 let gameState = createInitialState({
@@ -489,7 +490,7 @@ function moveHoldDirection(now) {
   const elapsed = now - input.holdStartedAt;
   const interval = elapsed >= HOLD_DELAY_MS ? HOLD_REPEAT_MS : HOLD_DELAY_MS - elapsed;
   if (now - input.holdLastMoveAt >= interval) {
-    const moved = moveActivePiece(gameState, requestedDir < 0 ? 'left' : 'right');
+    const moved = moveActivePiece(gameState, input.moveDir < 0 ? 'left' : 'right');
     input.holdLastMoveAt = now;
     if (!moved && elapsed < HOLD_DELAY_MS) {
       input.holdStartedAt = now - HOLD_DELAY_MS;
@@ -628,6 +629,59 @@ function onTouchControlStart(button, handler) {
   button.addEventListener('pointerleave', upHandler);
 }
 
+function getBoardTouchIntent(startX, startY, touchX, touchY) {
+  const dx = touchX - startX;
+  const dy = touchY - startY;
+
+  if (Math.abs(dx) < BOARD_TOUCH_THRESHOLD && Math.abs(dy) < BOARD_TOUCH_THRESHOLD) {
+    return null;
+  }
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx < 0 ? 'left' : 'right';
+  }
+
+  if (dy > 0) {
+    return 'down';
+  }
+
+  if (dy <= -BOARD_TOUCH_UP_HARD_DROP_MIN) {
+    return 'up';
+  }
+
+  return null;
+}
+
+function applyBoardIntent(pointerState, nextIntent) {
+  const prev = pointerState.active;
+  if (prev === nextIntent) {
+    return;
+  }
+
+  if (prev === 'left') {
+    stopMoveLeft();
+  } else if (prev === 'right') {
+    stopMoveRight();
+  } else if (prev === 'down') {
+    setSoftDropInput(false);
+  }
+
+  if (nextIntent === 'left') {
+    startMoveLeft();
+  } else if (nextIntent === 'right') {
+    startMoveRight();
+  } else if (nextIntent === 'down') {
+    setSoftDropInput(true);
+  } else if (nextIntent === 'up') {
+    if (!pointerState.hardDropped) {
+      hardDropPiece(gameState);
+      pointerState.hardDropped = true;
+    }
+  }
+
+  pointerState.active = nextIntent;
+}
+
 onTouchControlStart(ctrlLeft, (phase) => {
   if (gameState.status !== 'playing') {
     return;
@@ -665,6 +719,7 @@ function handleBoardTouchStart(event) {
     startX: event.clientX,
     startY: event.clientY,
     active: 'pending',
+    hardDropped: false,
   });
 
   try {
@@ -683,34 +738,18 @@ function handleBoardTouchMove(event) {
   }
 
   const pointerState = boardMovePointers.get(pointerId);
-  const dx = event.clientX - pointerState.startX;
-  const dy = event.clientY - pointerState.startY;
+  const nextIntent = getBoardTouchIntent(
+    pointerState.startX,
+    pointerState.startY,
+    event.clientX,
+    event.clientY,
+  );
 
-  if (pointerState.active !== 'pending') {
+  if (!nextIntent) {
     return;
   }
 
-  if (
-    Math.abs(dx) < BOARD_TOUCH_THRESHOLD &&
-    Math.abs(dy) < BOARD_TOUCH_THRESHOLD
-  ) {
-    return;
-  }
-
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    pointerState.active = dx < 0 ? 'left' : 'right';
-    if (pointerState.active === 'left') {
-      startMoveLeft();
-    } else {
-      startMoveRight();
-    }
-    return;
-  }
-
-  if (dy > 0) {
-    pointerState.active = 'down';
-    setSoftDropInput(true);
-  }
+  applyBoardIntent(pointerState, nextIntent);
 }
 
 function handleBoardTouchEnd(event) {
@@ -721,13 +760,17 @@ function handleBoardTouchEnd(event) {
 
   const pointerState = boardMovePointers.get(pointerId);
   boardMovePointers.delete(pointerId);
+
   if (pointerState.active === 'pending') {
     rotateActivePieceIfAllowed();
-  } else if (pointerState.active === 'left') {
+    return;
+  }
+
+  if (pointerState.active === 'left') {
     stopMoveLeft();
   } else if (pointerState.active === 'right') {
     stopMoveRight();
-  } else {
+  } else if (pointerState.active === 'down') {
     setSoftDropInput(false);
   }
 }

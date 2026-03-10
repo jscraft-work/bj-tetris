@@ -41,28 +41,6 @@ android {
     }
 }
 
-tasks.register('syncWebAssets') {
-    doLast {
-        def srcRoot = file("$projectDir/../..")
-        def dstRoot = file("$projectDir/src/main/assets")
-
-        delete(dstRoot)
-
-        copy {
-            from(srcRoot) {
-                include 'index.html'
-                include 'styles.css'
-                include 'src/**'
-                include 'assets/**'
-            }
-            into(dstRoot)
-        }
-    }
-}
-
-tasks.named('preBuild').configure {
-    dependsOn(tasks.syncWebAssets)
-}
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'

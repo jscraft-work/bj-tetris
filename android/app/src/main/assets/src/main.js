@@ -6,7 +6,6 @@ import {
 } from './render.js';
 import {
   createInitialState,
-  setNumberBlocksEnabled,
   stepPhysics,
   moveActivePiece,
   rotateActivePiece,
@@ -21,6 +20,10 @@ import {
   stopBackgroundMusic,
   play,
   isAudioEnabled,
+  setMusicEnabled,
+  getBgmTrackList,
+  setBgmTrackIndex,
+  getBgmTrackIndex,
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS } from './constants.js';
@@ -44,6 +47,11 @@ const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
 const toggleNumberBlocksBtn = document.getElementById('toggleNumberBlocksBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+const toggleBgmBtn = document.getElementById('toggleBgmBtn');
+const bgmTrackSelectContainer = document.getElementById('bgmTrackList');
 const ctx = canvas.getContext('2d');
 const playLayout = document.querySelector('.play-layout');
 const hud = document.querySelector('.hud');
@@ -58,12 +66,19 @@ const BOARD_TOUCH_THRESHOLD = 14;
 const BOARD_TOUCH_UP_HARD_DROP_MIN = 28;
 
 const NUMBER_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
+const MUSIC_ENABLED_STORAGE_KEY = 'tetris.musicEnabled';
+const BGM_TRACK_INDEX_STORAGE_KEY = 'tetris.bgmTrackIndex';
+const MAX_BGM_TRACK_LABEL_LENGTH = 26;
 let gameState = createInitialState({
   numberBlocksEnabled: readNumberBlockSetting(),
 });
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
 let nextLayout = resizeNextCanvas(nextCanvas);
+let bgmTrackNames = [];
+let numberBlocksEnabled = gameState.numberBlocksEnabled;
+let musicEnabled = readMusicEnabledSetting();
+let selectedBgmTrackIndexes = readBgmTrackSelection();
 let pointerLock = false;
 const input = {
   moveDir: 0,
@@ -80,8 +95,10 @@ const hudState = {
   lines: '',
   score: '',
 };
-let numberBlocksEnabled = gameState.numberBlocksEnabled;
 const boardMovePointers = new Map();
+
+setMusicEnabled(musicEnabled);
+setBgmTrackIndex(selectedBgmTrackIndexes);
 
 function readNumberBlockSetting() {
   try {
@@ -99,6 +116,171 @@ function persistNumberBlockSetting(value) {
   try {
     localStorage.setItem(NUMBER_BLOCKS_STORAGE_KEY, String(!!value));
   } catch {}
+}
+
+function readMusicEnabledSetting() {
+  try {
+    const value = localStorage.getItem(MUSIC_ENABLED_STORAGE_KEY);
+    if (value === null) {
+      return true;
+    }
+    return value === 'true';
+  } catch {
+    return true;
+  }
+}
+
+function persistMusicEnabledSetting(value) {
+  try {
+    localStorage.setItem(MUSIC_ENABLED_STORAGE_KEY, String(!!value));
+  } catch {}
+}
+
+function readBgmTrackSelection() {
+  try {
+    const value = localStorage.getItem(BGM_TRACK_INDEX_STORAGE_KEY);
+    if (value === null) {
+      return [];
+    }
+
+    if (value.trim() === '') {
+      return [];
+    }
+
+    if (value.startsWith('[')) {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed
+        .map((item) => Number.parseInt(item, 10))
+        .filter((item) => Number.isInteger(item) && item >= 0);
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? [parsed] : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistBgmTrackSelection(values) {
+  try {
+    const valuesArray = Array.isArray(values)
+      ? values.map((value) => Number.parseInt(value, 10)).filter((value) => Number.isInteger(value) && value >= 0)
+      : [];
+    const normalized = Array.from(new Set(valuesArray));
+    localStorage.setItem(BGM_TRACK_INDEX_STORAGE_KEY, JSON.stringify(normalized));
+  } catch {}
+}
+
+function normalizeSelectedTrackIndexes(raw = []) {
+  const normalized = Array.isArray(raw)
+    ? raw.map((value) => Number.parseInt(value, 10)).filter((value) => Number.isInteger(value) && value >= 0)
+    : [];
+
+  const unique = [];
+  normalized.forEach((value) => {
+    if (!unique.includes(value)) {
+      unique.push(value);
+    }
+  });
+
+  if (!bgmTrackNames.length) {
+    return unique.sort((a, b) => a - b);
+  }
+
+  return unique
+    .filter((value) => value < bgmTrackNames.length)
+    .sort((a, b) => a - b);
+}
+
+function renderBgmTrackCheckboxes() {
+  if (!bgmTrackSelectContainer) {
+    return;
+  }
+
+  bgmTrackSelectContainer.innerHTML = '';
+
+  if (!bgmTrackNames.length) {
+    const fallback = document.createElement('div');
+    fallback.className = 'bgm-track-empty';
+    fallback.textContent = '음원 목록을 불러오는 중입니다.';
+    bgmTrackSelectContainer.appendChild(fallback);
+    return;
+  }
+
+  bgmTrackNames.forEach((track, index) => {
+    const label = document.createElement('label');
+    label.className = 'bgm-track-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = String(index);
+    checkbox.checked = selectedBgmTrackIndexes.includes(index);
+    checkbox.disabled = !musicEnabled;
+
+    const text = document.createElement('span');
+    text.textContent = formatTrackLabel(track);
+
+    label.append(checkbox, text);
+    bgmTrackSelectContainer.appendChild(label);
+  });
+
+  updateSettingsTexts();
+}
+
+function formatTrackLabel(track) {
+  const file = String(track || '')
+    .split('/')
+    .filter(Boolean)
+    .pop();
+  if (!file) {
+    return 'track';
+  }
+  if (file.length <= MAX_BGM_TRACK_LABEL_LENGTH) {
+    return file.replace(/\.mp3$/i, '');
+  }
+  return `${file.slice(0, MAX_BGM_TRACK_LABEL_LENGTH - 1)}…`;
+}
+
+function updateSettingsTexts() {
+  if (toggleNumberBlocksBtn) {
+    toggleNumberBlocksBtn.textContent = `NUMBER BLOCKS ${numberBlocksEnabled ? 'ON' : 'OFF'}`;
+  }
+  if (toggleBgmBtn) {
+    toggleBgmBtn.textContent = `BGM ${musicEnabled ? 'ON' : 'OFF'}`;
+  }
+
+  if (bgmTrackSelectContainer) {
+    const inputs = bgmTrackSelectContainer.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach((input) => {
+      input.disabled = !musicEnabled;
+    });
+  }
+}
+
+function loadBgmTrackList() {
+  getBgmTrackList()
+    .then((tracks) => {
+      bgmTrackNames = Array.isArray(tracks) ? tracks : [];
+      const next = normalizeSelectedTrackIndexes(selectedBgmTrackIndexes);
+      selectedBgmTrackIndexes = next;
+      renderBgmTrackCheckboxes();
+      persistBgmTrackSelection(selectedBgmTrackIndexes);
+      setBgmTrackIndex(selectedBgmTrackIndexes);
+      if (musicEnabled) {
+        ensureAudioReady();
+        startBackgroundMusic();
+      }
+    })
+    .catch(() => {
+      bgmTrackNames = [];
+      selectedBgmTrackIndexes = [];
+      persistBgmTrackSelection(selectedBgmTrackIndexes);
+      renderBgmTrackCheckboxes();
+      setBgmTrackIndex(selectedBgmTrackIndexes);
+    });
 }
 
 function syncNextPanelOffset(layoutForOffset) {
@@ -175,9 +357,7 @@ function applyHud() {
     scoreText.textContent = score;
     hudState.score = score;
   }
-  if (toggleNumberBlocksBtn) {
-    toggleNumberBlocksBtn.textContent = `NUMBER ${numberBlocksEnabled ? 'ON' : 'OFF'}`;
-  }
+  updateSettingsTexts();
 }
 
 function markPressed(button, active) {
@@ -368,9 +548,71 @@ function onOverlayAction() {
 
 function toggleNumberBlocks() {
   numberBlocksEnabled = !numberBlocksEnabled;
-  setNumberBlocksEnabled(gameState, numberBlocksEnabled);
   persistNumberBlockSetting(numberBlocksEnabled);
   applyHud();
+  updateSettingsTexts();
+}
+
+function toggleBgm() {
+  musicEnabled = !musicEnabled;
+  setMusicEnabled(musicEnabled);
+  persistMusicEnabledSetting(musicEnabled);
+  ensureAudioReady();
+  if (musicEnabled) {
+    startBackgroundMusic();
+  } else {
+    stopBackgroundMusic();
+  }
+  updateSettingsTexts();
+}
+
+function showSettingsPanel() {
+  if (!settingsPanel) {
+    return;
+  }
+  settingsPanel.classList.remove('hidden');
+  loadBgmTrackList();
+  updateSettingsTexts();
+}
+
+function hideSettingsPanel() {
+  if (!settingsPanel) {
+    return;
+  }
+  settingsPanel.classList.add('hidden');
+}
+
+function onBgmTrackSelectChange(event) {
+  if (!event.target || event.target.type !== 'checkbox') {
+    return;
+  }
+
+  const parsed = Number.parseInt(event.target.value, 10);
+  if (!Number.isInteger(parsed)) {
+    return;
+  }
+
+  const next = selectedBgmTrackIndexes.slice();
+  if (event.target.checked) {
+    if (!next.includes(parsed)) {
+      next.push(parsed);
+    }
+  } else {
+    const index = next.indexOf(parsed);
+    if (index >= 0) {
+      next.splice(index, 1);
+    }
+  }
+
+  selectedBgmTrackIndexes = normalizeSelectedTrackIndexes(next);
+  persistBgmTrackSelection(selectedBgmTrackIndexes);
+  setBgmTrackIndex(selectedBgmTrackIndexes);
+  if (musicEnabled) {
+    ensureAudioReady();
+    startBackgroundMusic();
+  }
+  renderBgmTrackCheckboxes();
+  updateSettingsTexts();
 }
 
 function handleEvents(events) {
@@ -853,6 +1095,35 @@ overlayAction.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   onOverlayAction();
 });
+
+if (settingsBtn) {
+  settingsBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    showSettingsPanel();
+  });
+}
+if (settingsCloseBtn) {
+  settingsCloseBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    hideSettingsPanel();
+  });
+}
+if (settingsPanel) {
+  settingsPanel.addEventListener('pointerdown', (event) => {
+    if (event.target === settingsPanel) {
+      hideSettingsPanel();
+    }
+  });
+}
+if (toggleBgmBtn) {
+  toggleBgmBtn.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    toggleBgm();
+  });
+}
+if (bgmTrackSelectContainer) {
+  bgmTrackSelectContainer.addEventListener('change', onBgmTrackSelectChange);
+}
 restartBtn.addEventListener('click', onStartClick);
 restartBtn.addEventListener('pointerdown', onStartClick);
 if (toggleNumberBlocksBtn) {
@@ -887,6 +1158,8 @@ if (typeof ResizeObserver !== 'undefined' && playLayout && nextPanel) {
 }
 
 applyHud();
+updateSettingsTexts();
+loadBgmTrackList();
 updateOverlay();
 layout = resizeCanvas(canvas);
 nextLayout = resizeNextCanvas(nextCanvas);

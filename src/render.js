@@ -4,6 +4,7 @@ import {
   HIDDEN_HEIGHT,
   NUMBERBLOCKS_IMAGES,
   VFX_LINE_CLEAR_MS,
+  VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
 } from './constants.js';
 import { getGhostPiece } from './state.js';
@@ -400,18 +401,50 @@ export function render(state, layout, ctx, now = Date.now()) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, boardW, boardH);
 
+  const clearingRows = state.clearing ? state.clearing.rows : null;
+  let clearingProgress = 0;
+  if (state.clearing) {
+    const elapsed = Date.now() - state.clearing.startedAt;
+    clearingProgress = Math.min(1, elapsed / VFX_LINE_FADE_MS);
+  }
+
   for (let y = HIDDEN_HEIGHT; y < state.board.length; y += 1) {
+    const isClearing = clearingRows && clearingRows.includes(y);
+
     for (let x = 0; x < BOARD_WIDTH; x += 1) {
       const boardCell = state.board[y][x];
       if (!boardCell) {
         continue;
       }
       const boardMeta = getCellMeta(boardCell);
-      drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true, 1, {
-        useImage: false,
-        type: boardMeta.type,
-      });
+
+      if (isClearing) {
+        // Fade out: full alpha at start → 0 at end
+        const alpha = Math.max(0, 1 - clearingProgress);
+        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true, alpha, {
+          useImage: false,
+          type: boardMeta.type,
+        });
+      } else {
+        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true, 1, {
+          useImage: false,
+          type: boardMeta.type,
+        });
+      }
     }
+  }
+
+  // White flash overlay on clearing rows
+  if (state.clearing && clearingProgress < 0.35) {
+    const flashAlpha = (1 - clearingProgress / 0.35) * 0.55;
+    ctx.save();
+    ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+    clearingRows.forEach((y) => {
+      if (y >= HIDDEN_HEIGHT) {
+        ctx.fillRect(0, (y - HIDDEN_HEIGHT) * cell, boardW, cell);
+      }
+    });
+    ctx.restore();
   }
 
   if (state.active) {
@@ -450,6 +483,5 @@ export function render(state, layout, ctx, now = Date.now()) {
     }
   }
 
-  // vfx removed to avoid residual color artifacts on empty cells
   drawGrid(ctx, layout);
 }

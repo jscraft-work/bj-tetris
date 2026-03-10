@@ -7,6 +7,7 @@ export const SOFT_DROP_FACTOR = 0.2;
 export const MIN_DROP_MS = 100;
 export const VFX_ROTATE_MS = 140;
 export const VFX_LINE_CLEAR_MS = 110;
+export const VFX_LINE_FADE_MS = 350;
 export const VFX_IMPACT_MS = 100;
 
 export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];

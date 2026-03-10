@@ -13,6 +13,7 @@ import {
   SCORE_BY_LINES,
   VFX_ROTATE_MS,
   VFX_LINE_CLEAR_MS,
+  VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
 } from './constants.js';
 
@@ -199,6 +200,7 @@ export function createInitialState(options = {}) {
     dropAccumulator: 0,
     softDrop: false,
     lastClearLines: 0,
+    clearing: null,
     events: [],
     vfx: {
       rotateUntil: 0,
@@ -342,9 +344,54 @@ export function spawnNextPiece(state) {
   }
 }
 
+function findFullRows(board) {
+  const rows = [];
+  for (let y = 0; y < board.length; y += 1) {
+    if (board[y].every((cell) => cell !== 0)) {
+      rows.push(y);
+    }
+  }
+  return rows;
+}
+
+function removeFullLines(state) {
+  let cleared = 0;
+  for (let y = state.board.length - 1; y >= 0; y -= 1) {
+    if (state.board[y].every((cell) => cell !== 0)) {
+      state.board.splice(y, 1);
+      state.board.unshift(Array(BOARD_WIDTH).fill(0));
+      cleared += 1;
+      y += 1;
+    }
+  }
+
+  if (cleared > 0) {
+    state.score += SCORE_BY_LINES[Math.min(cleared, 4)] * state.level;
+    state.lines += cleared;
+
+    const nextLevel = Math.floor(state.lines / 10) + 1;
+    if (nextLevel !== state.level) {
+      state.level = nextLevel;
+      state.dropMs = computeDropMs(state.level);
+      emitEvent(state, 'level_up');
+    }
+  }
+
+  state.lastClearLines = cleared;
+  return cleared;
+}
+
+function finishClearing(state) {
+  if (!state.clearing) {
+    return;
+  }
+  removeFullLines(state);
+  state.clearing = null;
+  spawnNextPiece(state);
+}
+
 function settleActive(state) {
   const overflow = lockActivePiece(state);
-  clearFullLines(state);
 
   if (overflow) {
     state.status = 'gameover';
@@ -352,7 +399,21 @@ function settleActive(state) {
     return;
   }
 
-  spawnNextPiece(state);
+  const fullRows = findFullRows(state.board);
+
+  if (fullRows.length > 0) {
+    state.clearing = {
+      rows: fullRows,
+      startedAt: Date.now(),
+    };
+    state.active = null;
+
+    const eventName = `line_clear_${Math.min(fullRows.length, 4)}`;
+    emitEvent(state, eventName);
+  } else {
+    state.lastClearLines = 0;
+    spawnNextPiece(state);
+  }
 }
 
 export function stepDrop(state) {
@@ -478,6 +539,13 @@ export function togglePause(state) {
 
 export function stepPhysics(state, deltaMs) {
   if (state.status !== 'playing') {
+    return;
+  }
+
+  if (state.clearing) {
+    if (Date.now() >= state.clearing.startedAt + VFX_LINE_FADE_MS) {
+      finishClearing(state);
+    }
     return;
   }
 

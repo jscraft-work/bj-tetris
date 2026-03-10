@@ -15,6 +15,7 @@ import {
   VFX_LINE_CLEAR_MS,
   VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
+  LOCK_DELAY_MS,
 } from './constants.js';
 
 let pieceSerial = 1;
@@ -201,6 +202,7 @@ export function createInitialState(options = {}) {
     softDrop: false,
     lastClearLines: 0,
     clearing: null,
+    groundedAt: null,
     events: [],
     vfx: {
       rotateUntil: 0,
@@ -337,6 +339,7 @@ function clearFullLines(state) {
 export function spawnNextPiece(state) {
   state.active = state.next;
   state.next = createPiece(undefined, state.numberBlocksEnabled);
+  state.groundedAt = null;
   emitEvent(state, 'piece_spawned');
   if (!canPlacePiece(state, state.active)) {
     state.status = 'gameover';
@@ -547,6 +550,22 @@ export function stepPhysics(state, deltaMs) {
       finishClearing(state);
     }
     return;
+  }
+
+  if (state.active) {
+    const canDown = canPlacePiece(state, { ...state.active, y: state.active.y + 1 });
+    if (!canDown) {
+      if (!state.groundedAt) {
+        state.groundedAt = Date.now();
+      }
+      if (Date.now() - state.groundedAt >= LOCK_DELAY_MS) {
+        state.groundedAt = null;
+        settleActive(state);
+        return;
+      }
+    } else {
+      state.groundedAt = null;
+    }
   }
 
   state.dropAccumulator += deltaMs;

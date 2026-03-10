@@ -24,6 +24,21 @@
         <div class="lobby-inner">
           <h1>BJ TETRIS</h1>
           <p id="lobbyUserId" class="lobby-user-id"></p>
+          <button id="lobbyStartBtn" type="button" class="lobby-action-btn lobby-start-btn">게임 시작</button>
+          <button id="lobbyRankingBtn" type="button" class="lobby-action-btn lobby-ranking-btn">랭킹</button>
+          <button id="lobbySettingsBtn" type="button" class="lobby-action-btn lobby-settings-btn">설정</button>
+          <button id="lobbyLogoutBtn" type="button" class="lobby-action-btn lobby-logout-btn">로그아웃</button>
+          <button id="lobbyExitBtn" type="button" class="lobby-action-btn lobby-exit-btn">게임 종료</button>
+        </div>
+      </section>
+
+      <!-- Settings Popup -->
+      <div id="settingsPopup" class="popup-overlay hidden">
+        <div class="popup-inner">
+          <div class="popup-header">
+            <h2>설정</h2>
+            <button id="settingsPopupClose" type="button" class="popup-close-btn">✕</button>
+          </div>
           <div class="settings-group">
             <label for="toggleNumberBlocksBtn">넘버블록 (다음 게임부터 적용)</label>
             <button id="toggleNumberBlocksBtn" type="button">NUMBER BLOCKS ON</button>
@@ -36,7 +51,16 @@
             <label for="bgmTrackList">음원 선택</label>
             <div id="bgmTrackList" class="bgm-track-list"></div>
           </div>
-          <!-- Ranking -->
+        </div>
+      </div>
+
+      <!-- Ranking Popup -->
+      <div id="rankingPopup" class="popup-overlay hidden">
+        <div class="popup-inner">
+          <div class="popup-header">
+            <h2>랭킹</h2>
+            <button id="rankingPopupClose" type="button" class="popup-close-btn">✕</button>
+          </div>
           <div class="ranking-section">
             <div class="ranking-tabs">
               <button id="rankTabAll" type="button" class="ranking-tab active">전체 랭킹</button>
@@ -53,11 +77,8 @@
               <div class="ranking-empty">기록이 없습니다.</div>
             </div>
           </div>
-          <button id="lobbyStartBtn" type="button" class="lobby-action-btn lobby-start-btn">게임 시작</button>
-          <button id="lobbyLogoutBtn" type="button" class="lobby-action-btn lobby-logout-btn">로그아웃</button>
-          <button id="lobbyExitBtn" type="button" class="lobby-action-btn lobby-exit-btn">게임 종료</button>
         </div>
-      </section>
+      </div>
 
       <!-- GAME SCREEN -->
       <section id="screen-game" class="screen screen-hidden">

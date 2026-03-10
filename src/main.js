@@ -67,6 +67,12 @@ const lobbyUserId = document.getElementById('lobbyUserId');
 const lobbyStartBtn = document.getElementById('lobbyStartBtn');
 const lobbyLogoutBtn = document.getElementById('lobbyLogoutBtn');
 const lobbyExitBtn = document.getElementById('lobbyExitBtn');
+const lobbyRankingBtn = document.getElementById('lobbyRankingBtn');
+const lobbySettingsBtn = document.getElementById('lobbySettingsBtn');
+const settingsPopup = document.getElementById('settingsPopup');
+const settingsPopupClose = document.getElementById('settingsPopupClose');
+const rankingPopup = document.getElementById('rankingPopup');
+const rankingPopupClose = document.getElementById('rankingPopupClose');
 const rankTabAll = document.getElementById('rankTabAll');
 const rankTabMy = document.getElementById('rankTabMy');
 const rankingList = document.getElementById('rankingList');
@@ -1255,6 +1261,51 @@ if (rankTabMy) {
   rankTabMy.addEventListener('click', () => loadRanking('my'));
 }
 
+// ── Popup Show/Hide ──
+function showSettingsPopup() {
+  if (settingsPopup) settingsPopup.classList.remove('hidden');
+  loadBgmTrackList();
+  updateSettingsTexts();
+}
+
+function hideSettingsPopup() {
+  if (settingsPopup) settingsPopup.classList.add('hidden');
+}
+
+function showRankingPopup() {
+  if (rankingPopup) rankingPopup.classList.remove('hidden');
+  loadRanking(currentRankTab);
+}
+
+function hideRankingPopup() {
+  if (rankingPopup) rankingPopup.classList.add('hidden');
+}
+
+if (lobbySettingsBtn) {
+  lobbySettingsBtn.addEventListener('click', showSettingsPopup);
+}
+if (settingsPopupClose) {
+  settingsPopupClose.addEventListener('click', hideSettingsPopup);
+}
+if (lobbyRankingBtn) {
+  lobbyRankingBtn.addEventListener('click', showRankingPopup);
+}
+if (rankingPopupClose) {
+  rankingPopupClose.addEventListener('click', hideRankingPopup);
+}
+
+// Close popups when clicking the overlay background
+if (settingsPopup) {
+  settingsPopup.addEventListener('click', (e) => {
+    if (e.target === settingsPopup) hideSettingsPopup();
+  });
+}
+if (rankingPopup) {
+  rankingPopup.addEventListener('click', (e) => {
+    if (e.target === rankingPopup) hideRankingPopup();
+  });
+}
+
 // ── Lobby Flow ──
 function navigateToLobby(user) {
   const displayId = extractUserId(user);
@@ -1262,10 +1313,10 @@ function navigateToLobby(user) {
   if (lobbyUserId) {
     lobbyUserId.textContent = displayId ? `${displayId} 님` : '';
   }
+  hideSettingsPopup();
+  hideRankingPopup();
   showScreen('lobby');
-  loadBgmTrackList();
   updateSettingsTexts();
-  loadRanking(currentRankTab);
 }
 
 function startGameFromLobby() {
@@ -1287,10 +1338,10 @@ function exitToLobby() {
   stopBackgroundMusic();
   stopAllMovementInputs();
   gameState = createInitialState({ numberBlocksEnabled });
+  hideSettingsPopup();
+  hideRankingPopup();
   showScreen('lobby');
-  loadBgmTrackList();
   updateSettingsTexts();
-  loadRanking(currentRankTab);
 }
 
 if (lobbyStartBtn) {

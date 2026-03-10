@@ -19,6 +19,191 @@ body {
   font-family: "Trebuchet MS", "Verdana", "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ── Screen visibility ── */
+.screen-hidden {
+  display: none !important;
+}
+
+/* ── Login Screen ── */
+#screen-login,
+#screen-lobby {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.login-form {
+  width: min(100%, 280px);
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid #3a4e7a;
+  border-radius: 12px;
+  background: rgba(6, 10, 20, 0.92);
+  text-align: center;
+}
+
+.login-form h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #7fb4ff;
+  letter-spacing: 0.15em;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #5f74a6;
+  border-radius: 8px;
+  background: rgba(15, 24, 48, 0.9);
+  color: #ecf0ff;
+  font-size: 14px;
+  outline: none;
+}
+
+.login-form input:focus {
+  border-color: #7fb4ff;
+}
+
+.login-error {
+  color: #ff6a6a;
+  font-size: 12px;
+  min-height: 16px;
+  margin: 0;
+}
+
+#loginBtn {
+  padding: 8px 16px;
+  border: 1px solid #7fb4ff;
+  border-radius: 8px;
+  color: #ecf0ff;
+  background: linear-gradient(180deg, #284b90, #123066);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#loginBtn:active {
+  transform: translateY(1px);
+}
+
+#loginBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Lobby Screen ── */
+.lobby-inner {
+  width: min(100%, 300px);
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #3a4e7a;
+  border-radius: 12px;
+  background: rgba(6, 10, 20, 0.92);
+  text-align: center;
+}
+
+.lobby-inner h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #7fb4ff;
+  letter-spacing: 0.15em;
+}
+
+.lobby-user-id {
+  font-size: 12px;
+  color: #aab8d8;
+  margin: 0;
+}
+
+.lobby-action-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #ecf0ff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.lobby-action-btn:active {
+  transform: translateY(1px);
+}
+
+.lobby-start-btn {
+  border: 1px solid #48c2a8;
+  background: linear-gradient(180deg, #1f4f3f, #123428);
+}
+
+.lobby-logout-btn {
+  border: 1px solid #6f87bf;
+  background: linear-gradient(180deg, #1d3f78, #11234b);
+}
+
+.lobby-exit-btn {
+  border: 1px solid #f08080;
+  background: linear-gradient(180deg, #6a2a2a, #3a1313);
+}
+
+/* ── Confirm Dialog ── */
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 8, 16, 0.8);
+}
+
+.confirm-dialog.hidden {
+  display: none;
+}
+
+.confirm-dialog-inner {
+  width: min(90%, 280px);
+  padding: 20px;
+  border: 1px solid #3a4e7a;
+  border-radius: 12px;
+  background: rgba(6, 10, 20, 0.95);
+  text-align: center;
+  display: grid;
+  gap: 16px;
+}
+
+.confirm-dialog-inner p {
+  margin: 0;
+  font-size: 14px;
+  color: #ecf0ff;
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.confirm-actions button {
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #ecf0ff;
+}
+
+.confirm-actions button:active {
+  transform: translateY(1px);
+}
+
+#confirmYes {
+  border: 1px solid #48c2a8;
+  background: linear-gradient(180deg, #1f4f3f, #123428);
+}
+
+#confirmNo {
+  border: 1px solid #f08080;
+  background: linear-gradient(180deg, #6a2a2a, #3a1313);
+}
+
+/* ── Game Screen ── */
 .shell {
   --hud-control-width: 280px;
   --control-bar-width: 280px;
@@ -28,6 +213,14 @@ body {
   gap: 10px;
   width: min(100vw, 420px);
   padding: 12px;
+}
+
+#screen-game {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
 }
 
 .hud {
@@ -45,9 +238,8 @@ body {
 
 .hud div,
 #restartBtn,
-#settingsBtn,
+#exitToLobbyBtn,
 #overlayAction,
-.settings-close,
 .control-btn {
   display: inline-flex;
   align-items: center;
@@ -66,15 +258,16 @@ body {
   cursor: pointer;
 }
 
-#settingsBtn {
+#exitToLobbyBtn {
   grid-column: span 2;
-  border: 1px solid #6f87bf;
+  border: 1px solid #d0a84f;
   color: #ecf0ff;
-  background: linear-gradient(180deg, #1d3f78, #11234b);
+  background: linear-gradient(180deg, #6d541b, #3c2e14);
   cursor: pointer;
 }
 
 #restartBtn:active,
+#exitToLobbyBtn:active,
 #overlayAction:active {
   transform: translateY(1px);
 }
@@ -184,39 +377,11 @@ body {
   margin: 0;
 }
 
-.settings-panel {
-  position: fixed;
-  inset: 0;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  background: rgba(5, 8, 16, 0.72);
-}
-
-.settings-panel.hidden {
-  display: none;
-}
-
-.settings-panel-inner {
-  width: min(100%, 340px);
-  border: 1px solid #3a4e7a;
-  border-radius: 12px;
-  padding: 8px;
-  background: rgba(6, 10, 20, 0.92);
-  display: grid;
-  gap: 8px;
-}
-
-.settings-panel h2 {
-  margin: 0;
-  font-size: 15px;
-  color: #bfd3ff;
-}
-
+/* ── Settings (now in lobby) ── */
 .settings-group {
   display: grid;
   gap: 6px;
+  text-align: left;
 }
 
 .settings-group label {
@@ -241,6 +406,10 @@ body {
   border: 1px solid #6f87bf;
   color: #ecf0ff;
   background: rgba(15, 24, 48, 0.9);
+}
+
+.settings-group button:active {
+  transform: translateY(1px);
 }
 
 .bgm-track-list {
@@ -281,19 +450,6 @@ body {
   margin-top: 1px;
   width: 13px;
   height: 13px;
-}
-
-.settings-close {
-  justify-self: end;
-  border: 1px solid #7fb4ff;
-  color: #ecf0ff;
-  background: linear-gradient(180deg, #284b90, #123066);
-  cursor: pointer;
-}
-
-.settings-group button:active,
-.settings-close:active {
-  transform: translateY(1px);
 }
 
 .control-bar {
@@ -375,7 +531,7 @@ body {
 
   .hud div,
   #restartBtn,
-  #settingsBtn,
+  #exitToLobbyBtn,
   #overlayAction,
   .control-btn {
     padding: 2px 4px;

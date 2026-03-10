@@ -27,6 +27,9 @@ import {
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS } from './constants.js';
+import { login, getCurrentUser, extractUserId } from './services/supabase.js';
+import { showScreen, getCurrentScreen } from './screen.js';
+import { showConfirm } from './ui/confirm.js';
 
 const canvas = document.getElementById('gameCanvas');
 const boardArea = document.querySelector('.board-area');
@@ -47,10 +50,16 @@ const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
 const toggleNumberBlocksBtn = document.getElementById('toggleNumberBlocksBtn');
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsPanel = document.getElementById('settingsPanel');
-const settingsCloseBtn = document.getElementById('settingsCloseBtn');
 const toggleBgmBtn = document.getElementById('toggleBgmBtn');
+const exitToLobbyBtn = document.getElementById('exitToLobbyBtn');
+const loginBtn = document.getElementById('loginBtn');
+const loginIdInput = document.getElementById('loginId');
+const loginPwInput = document.getElementById('loginPw');
+const loginError = document.getElementById('loginError');
+const lobbyUserId = document.getElementById('lobbyUserId');
+const lobbyStartBtn = document.getElementById('lobbyStartBtn');
+const lobbyLogoutBtn = document.getElementById('lobbyLogoutBtn');
+const lobbyExitBtn = document.getElementById('lobbyExitBtn');
 const bgmTrackSelectContainer = document.getElementById('bgmTrackList');
 const ctx = canvas.getContext('2d');
 const playLayout = document.querySelector('.play-layout');
@@ -269,10 +278,6 @@ function loadBgmTrackList() {
       renderBgmTrackCheckboxes();
       persistBgmTrackSelection(selectedBgmTrackIndexes);
       setBgmTrackIndex(selectedBgmTrackIndexes);
-      if (musicEnabled) {
-        ensureAudioReady();
-        startBackgroundMusic();
-      }
     })
     .catch(() => {
       bgmTrackNames = [];
@@ -566,22 +571,6 @@ function toggleBgm() {
   updateSettingsTexts();
 }
 
-function showSettingsPanel() {
-  if (!settingsPanel) {
-    return;
-  }
-  settingsPanel.classList.remove('hidden');
-  loadBgmTrackList();
-  updateSettingsTexts();
-}
-
-function hideSettingsPanel() {
-  if (!settingsPanel) {
-    return;
-  }
-  settingsPanel.classList.add('hidden');
-}
-
 function onBgmTrackSelectChange(event) {
   if (!event.target || event.target.type !== 'checkbox') {
     return;
@@ -743,6 +732,11 @@ function moveHoldDirection(now) {
 function gameLoop(time) {
   const delta = time - lastTime;
   lastTime = time;
+
+  if (getCurrentScreen() !== 'game') {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
 
   if (gameState.status === 'playing') {
     startBackgroundMusic();
@@ -1096,25 +1090,6 @@ overlayAction.addEventListener('pointerdown', (event) => {
   onOverlayAction();
 });
 
-if (settingsBtn) {
-  settingsBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    showSettingsPanel();
-  });
-}
-if (settingsCloseBtn) {
-  settingsCloseBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    hideSettingsPanel();
-  });
-}
-if (settingsPanel) {
-  settingsPanel.addEventListener('pointerdown', (event) => {
-    if (event.target === settingsPanel) {
-      hideSettingsPanel();
-    }
-  });
-}
 if (toggleBgmBtn) {
   toggleBgmBtn.addEventListener('pointerdown', (event) => {
     event.preventDefault();
@@ -1157,13 +1132,189 @@ if (typeof ResizeObserver !== 'undefined' && playLayout && nextPanel) {
   layoutSyncObserver.observe(nextCanvas);
 }
 
-applyHud();
-updateSettingsTexts();
-loadBgmTrackList();
-updateOverlay();
-layout = resizeCanvas(canvas);
-nextLayout = resizeNextCanvas(nextCanvas);
-scheduleLayoutSync();
+// ── Login Flow ──
+if (loginBtn) {
+  loginBtn.addEventListener('click', async () => {
+    const id = loginIdInput.value.trim();
+    const pw = loginPwInput.value;
+
+    if (!id || !pw) {
+      loginError.textContent = 'ID와 비밀번호를 입력하세요.';
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginError.textContent = '';
+
+    try {
+      const result = await login(id, pw);
+      if (result.user) {
+        navigateToLobby(result.user);
+      } else {
+        loginError.textContent = result.error || '로그인에 실패했습니다.';
+      }
+    } catch (err) {
+      loginError.textContent = '네트워크 오류가 발생했습니다.';
+    }
+
+    loginBtn.disabled = false;
+  });
+}
+
+if (loginPwInput) {
+  loginPwInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      loginBtn.click();
+    }
+  });
+}
+
+// ── Lobby Flow ──
+function navigateToLobby(user) {
+  const displayId = extractUserId(user);
+  if (lobbyUserId) {
+    lobbyUserId.textContent = displayId ? `${displayId} 님` : '';
+  }
+  showScreen('lobby');
+  loadBgmTrackList();
+  updateSettingsTexts();
+}
+
+function startGameFromLobby() {
+  gameState = createInitialState({ numberBlocksEnabled });
+  gameState.status = 'playing';
+  ensureAudioReady();
+  startBackgroundMusic();
+  play(SFX_KEYS.START);
+  overlay.classList.add('hidden');
+  showScreen('game');
+  requestAnimationFrame(() => {
+    layout = resizeCanvas(canvas);
+    nextLayout = resizeNextCanvas(nextCanvas);
+    scheduleLayoutSync();
+  });
+}
+
+function exitToLobby() {
+  stopBackgroundMusic();
+  stopAllMovementInputs();
+  gameState = createInitialState({ numberBlocksEnabled });
+  showScreen('lobby');
+  loadBgmTrackList();
+  updateSettingsTexts();
+}
+
+if (lobbyStartBtn) {
+  lobbyStartBtn.addEventListener('click', () => {
+    startGameFromLobby();
+  });
+}
+
+if (lobbyLogoutBtn) {
+  lobbyLogoutBtn.addEventListener('click', async () => {
+    const { logout } = await import('./services/supabase.js');
+    await logout();
+    showScreen('login');
+    if (loginIdInput) loginIdInput.value = '';
+    if (loginPwInput) loginPwInput.value = '';
+    if (loginError) loginError.textContent = '';
+  });
+}
+
+if (lobbyExitBtn) {
+  lobbyExitBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm('종료할까요?');
+    if (confirmed) {
+      if (window.AndroidBridge && window.AndroidBridge.closeApp) {
+        window.AndroidBridge.closeApp();
+      } else {
+        window.close();
+      }
+    }
+  });
+}
+
+// ── Game Screen: Exit to Lobby ──
+if (exitToLobbyBtn) {
+  exitToLobbyBtn.addEventListener('click', async () => {
+    if (gameState.status === 'playing') {
+      togglePause(gameState);
+      stopBackgroundMusic();
+      stopAllMovementInputs();
+    }
+    const confirmed = await showConfirm('로비로 돌아갈까요?');
+    if (confirmed) {
+      exitToLobby();
+    } else if (gameState.status === 'paused') {
+      togglePause(gameState);
+      startBackgroundMusic();
+    }
+  });
+}
+
+// ── Visibility Change: Background BGM + Pause ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (getCurrentScreen() === 'game' && gameState.status === 'playing') {
+      togglePause(gameState);
+      stopBackgroundMusic();
+      stopAllMovementInputs();
+    }
+  }
+});
+
+// ── Android Back Button ──
+window.__onAndroidBack = async () => {
+  const screen = getCurrentScreen();
+
+  if (screen === 'game') {
+    if (gameState.status === 'playing') {
+      togglePause(gameState);
+      stopBackgroundMusic();
+      stopAllMovementInputs();
+    }
+    const confirmed = await showConfirm('로비로 돌아갈까요?');
+    if (confirmed) {
+      exitToLobby();
+    } else if (gameState.status === 'paused') {
+      togglePause(gameState);
+      startBackgroundMusic();
+    }
+    return;
+  }
+
+  if (screen === 'lobby') {
+    const confirmed = await showConfirm('종료할까요?');
+    if (confirmed) {
+      if (window.AndroidBridge && window.AndroidBridge.closeApp) {
+        window.AndroidBridge.closeApp();
+      } else {
+        window.close();
+      }
+    }
+    return;
+  }
+
+  // Login screen: default back
+  if (window.AndroidBridge && window.AndroidBridge.defaultBack) {
+    window.AndroidBridge.defaultBack();
+  }
+};
+
+// ── Initialization ──
+(async () => {
+  try {
+    const user = await getCurrentUser();
+    if (user) {
+      navigateToLobby(user);
+    } else {
+      showScreen('login');
+    }
+  } catch {
+    showScreen('login');
+  }
+})();
+
 requestAnimationFrame((time) => {
   lastTime = time;
   gameLoop(time);

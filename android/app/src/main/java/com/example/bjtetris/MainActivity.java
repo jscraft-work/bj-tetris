@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -44,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
 
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         webView.loadUrl("https://bae-jongsoo.github.io/bj-tetris/");
     }
 
@@ -90,10 +92,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("NewApi")
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "typeof window.__onAndroidBack === 'function' ? (window.__onAndroidBack(), 'handled') : 'default'",
+                result -> {
+                    if (!"\"handled\"".equals(result)) {
+                        runOnUiThread(() -> {
+                            if (webView.canGoBack()) {
+                                webView.goBack();
+                            } else {
+                                MainActivity.super.onBackPressed();
+                            }
+                        });
+                    }
+                }
+            );
         } else {
             super.onBackPressed();
         }
@@ -122,5 +138,23 @@ public class MainActivity extends AppCompatActivity {
             webView.destroy();
         }
         super.onDestroy();
+    }
+
+    private class AndroidBridge {
+        @JavascriptInterface
+        public void closeApp() {
+            runOnUiThread(() -> finishAffinity());
+        }
+
+        @JavascriptInterface
+        public void defaultBack() {
+            runOnUiThread(() -> {
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    MainActivity.super.onBackPressed();
+                }
+            });
+        }
     }
 }

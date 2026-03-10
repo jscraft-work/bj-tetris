@@ -12,6 +12,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -46,6 +47,29 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(true);
 
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (webView != null) {
+                    webView.evaluateJavascript(
+                        "typeof window.__onAndroidBack === 'function' ? (window.__onAndroidBack(), 'handled') : 'default'",
+                        result -> {
+                            if (!"\"handled\"".equals(result)) {
+                                runOnUiThread(() -> {
+                                    if (webView.canGoBack()) {
+                                        webView.goBack();
+                                    } else {
+                                        finish();
+                                    }
+                                });
+                            }
+                        }
+                    );
+                }
+            }
+        });
+
         webView.loadUrl("https://bae-jongsoo.github.io/bj-tetris/");
     }
 
@@ -92,29 +116,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("NewApi")
-    @Override
-    public void onBackPressed() {
-        if (webView != null) {
-            webView.evaluateJavascript(
-                "typeof window.__onAndroidBack === 'function' ? (window.__onAndroidBack(), 'handled') : 'default'",
-                result -> {
-                    if (!"\"handled\"".equals(result)) {
-                        runOnUiThread(() -> {
-                            if (webView.canGoBack()) {
-                                webView.goBack();
-                            } else {
-                                MainActivity.super.onBackPressed();
-                            }
-                        });
-                    }
-                }
-            );
-        } else {
-            super.onBackPressed();
-        }
-    }
-
     @Override
     protected void onPause() {
         if (webView != null) {
@@ -152,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
                 if (webView != null && webView.canGoBack()) {
                     webView.goBack();
                 } else {
-                    MainActivity.super.onBackPressed();
+                    finish();
                 }
             });
         }

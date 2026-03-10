@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
 
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl("https://bae-jongsoo.github.io/bj-tetris/");
     }
 
     private void requestFullscreen() {

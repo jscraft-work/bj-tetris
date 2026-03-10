@@ -45,8 +45,9 @@ body {
 
 .hud div,
 #restartBtn,
-#toggleNumberBlocksBtn,
+#settingsBtn,
 #overlayAction,
+.settings-close,
 .control-btn {
   display: inline-flex;
   align-items: center;
@@ -65,7 +66,7 @@ body {
   cursor: pointer;
 }
 
-#toggleNumberBlocksBtn {
+#settingsBtn {
   grid-column: span 2;
   border: 1px solid #6f87bf;
   color: #ecf0ff;
@@ -183,6 +184,118 @@ body {
   margin: 0;
 }
 
+.settings-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(5, 8, 16, 0.72);
+}
+
+.settings-panel.hidden {
+  display: none;
+}
+
+.settings-panel-inner {
+  width: min(100%, 340px);
+  border: 1px solid #3a4e7a;
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(6, 10, 20, 0.92);
+  display: grid;
+  gap: 8px;
+}
+
+.settings-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  color: #bfd3ff;
+}
+
+.settings-group {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-group label {
+  font-size: 12px;
+  color: #c7d4ee;
+}
+
+.settings-group button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 5px;
+  border-radius: 8px;
+  background: rgba(15, 24, 48, 0.7);
+  line-height: 1.2;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#toggleNumberBlocksBtn,
+#toggleBgmBtn {
+  border: 1px solid #6f87bf;
+  color: #ecf0ff;
+  background: rgba(15, 24, 48, 0.9);
+}
+
+.bgm-track-list {
+  max-height: 180px;
+  border: 1px solid #6f87bf;
+  border-radius: 8px;
+  padding: 4px 6px;
+  display: grid;
+  gap: 6px;
+  background: rgba(7, 16, 34, 0.7);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.bgm-track-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: #e8edff;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.bgm-track-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgm-track-empty {
+  font-size: 11px;
+  color: #aab8d8;
+}
+
+.bgm-track-item input[type='checkbox'] {
+  accent-color: #7fb4ff;
+  margin-top: 1px;
+  width: 13px;
+  height: 13px;
+}
+
+.settings-close {
+  justify-self: end;
+  border: 1px solid #7fb4ff;
+  color: #ecf0ff;
+  background: linear-gradient(180deg, #284b90, #123066);
+  cursor: pointer;
+}
+
+.settings-group button:active,
+.settings-close:active {
+  transform: translateY(1px);
+}
+
 .control-bar {
   width: min(100%, var(--control-bar-width, var(--hud-control-width)));
   margin: 0;
@@ -262,6 +375,7 @@ body {
 
   .hud div,
   #restartBtn,
+  #settingsBtn,
   #overlayAction,
   .control-btn {
     padding: 2px 4px;

@@ -26,12 +26,16 @@ let bgmMode = 'stopped';
 let bgmTrackAudio = null;
 let bgmLastTrackIndex = -1;
 let bgmTrackErrorStreak = 0;
+let bgmTrackSelection = [];
 let bgmTrackListReady = false;
 let bgmTrackListLoading = null;
 let bgmTrackList = [];
 const DEFAULT_BGM_TRACKS = [
   'grand_project-on-the-road-to-the-eighties_59sec-177566.mp3',
   'kaazoom-under-the-elven-star-fantasy-rpg-music-447854.mp3',
+  'mondamusic-retro-arcade-game-music-491667.mp3',
+  'mondamusic-synthwave-retro-pop-80s-491693.mp3',
+  'music_unlimited-stranger-things-124008.mp3',
   'viacheslavstarostin-game-gaming-video-game-music-471936.mp3',
 ];
 
@@ -129,6 +133,9 @@ function createTrackBgmAudio() {
     if (bgmMode !== 'track') {
       return;
     }
+    if (!musicEnabled || !enabled) {
+      return;
+    }
     startTrackMusic();
   });
   bgmTrackAudio.addEventListener('error', () => {
@@ -154,6 +161,52 @@ function stopTrackMusic() {
   }
   bgmTrackAudio.pause();
   bgmTrackAudio.currentTime = 0;
+}
+
+function isTrackIndexCandidate(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function isTrackSelectionActive() {
+  return getPlayableTrackSelection().length > 0;
+}
+
+function getPlayableTrackSelection() {
+  const source = Array.isArray(bgmTrackSelection) ? bgmTrackSelection : [];
+  const normalized = source.filter(isTrackIndexCandidate);
+  if (!bgmTrackList.length) {
+    return normalized;
+  }
+  return normalized.filter((index) => index < bgmTrackList.length);
+}
+
+function randomFromArray(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return -1;
+  }
+  return values[Math.floor(Math.random() * values.length)];
+}
+
+function getTrackIndexForPlay() {
+  const selectedIndexes = getPlayableTrackSelection();
+  if (!selectedIndexes.length) {
+    return getRandomTrackIndex();
+  }
+
+  const candidateIndexes = selectedIndexes.slice();
+  const previousIndex = bgmLastTrackIndex;
+  if (candidateIndexes.length > 1 && candidateIndexes.includes(previousIndex)) {
+    const filtered = candidateIndexes.filter((index) => index !== previousIndex);
+    if (filtered.length > 0) {
+      const index = randomFromArray(filtered);
+      bgmLastTrackIndex = index;
+      return index;
+    }
+  }
+
+  const index = randomFromArray(candidateIndexes);
+  bgmLastTrackIndex = index;
+  return index;
 }
 
 function getRandomTrackIndex() {
@@ -189,7 +242,7 @@ function startTrackMusic(forcePlay = false) {
 
   bgmMode = 'track';
   bgmTrackErrorStreak = 0;
-  const index = getRandomTrackIndex();
+  const index = getTrackIndexForPlay();
   if (index < 0) {
     return;
   }
@@ -225,6 +278,50 @@ export function initAudio() {
 
 export function setAudioEnabled(isEnabled) {
   enabled = !!isEnabled;
+}
+
+export function getBgmTrackList() {
+  if (bgmTrackListReady) {
+    return Promise.resolve(bgmTrackList.slice());
+  }
+
+  if (bgmTrackListLoading) {
+    return bgmTrackListLoading.then(() => bgmTrackList.slice());
+  }
+
+  return loadBgmTrackList().then(() => bgmTrackList.slice());
+}
+
+export function setBgmTrackIndex(index) {
+  if (Array.isArray(index)) {
+    bgmTrackSelection = index
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => isTrackIndexCandidate(value));
+  } else {
+    const parsed = Number.parseInt(index, 10);
+    bgmTrackSelection = isTrackIndexCandidate(parsed) ? [parsed] : [];
+  }
+
+  if (!Array.isArray(bgmTrackSelection)) {
+    bgmTrackSelection = [];
+  }
+  if (bgmTrackSelection.length > 1) {
+    const unique = [];
+    bgmTrackSelection.forEach((value) => {
+      if (!unique.includes(value)) {
+        unique.push(value);
+      }
+    });
+    bgmTrackSelection = unique;
+  }
+
+  if (musicEnabled && enabled && bgmMode === 'track') {
+    startTrackMusic(true);
+  }
+}
+
+export function getBgmTrackIndex() {
+  return getPlayableTrackSelection();
 }
 
 export function setMusicEnabled(isEnabled) {

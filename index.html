@@ -40,8 +40,9 @@
             <button id="settingsPopupClose" type="button" class="popup-close-btn">✕</button>
           </div>
           <div class="settings-group">
-            <label for="toggleSpecialBlocksBtn">특수블록 (다음 게임부터 적용)</label>
-            <button id="toggleSpecialBlocksBtn" type="button">SPECIAL BLOCKS ON</button>
+            <label for="specialBlockList">특수블록 선택 (다음 게임부터 적용)</label>
+            <button id="toggleSpecialBlocksAllBtn" type="button">특수블록 전체 선택</button>
+            <div id="specialBlockList" class="special-block-list"></div>
           </div>
           <div class="settings-group">
             <label for="toggleBgmBtn">BGM</label>
@@ -49,6 +50,7 @@
           </div>
           <div class="settings-group">
             <label for="bgmTrackList">음원 선택</label>
+            <button id="toggleBgmTracksAllBtn" type="button">음원 전체 선택</button>
             <div id="bgmTrackList" class="bgm-track-list"></div>
           </div>
         </div>

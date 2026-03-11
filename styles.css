@@ -566,8 +566,9 @@ body {
   box-sizing: border-box;
 }
 
-#toggleSpecialBlocksBtn,
-#toggleBgmBtn {
+#toggleSpecialBlocksAllBtn,
+#toggleBgmBtn,
+#toggleBgmTracksAllBtn {
   border: 1px solid #6f87bf;
   color: #ecf0ff;
   background: rgba(15, 24, 48, 0.9);
@@ -587,6 +588,35 @@ body {
   background: rgba(7, 16, 34, 0.7);
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+.special-block-list {
+  max-height: 140px;
+  border: 1px solid #6f87bf;
+  border-radius: 8px;
+  padding: 4px 6px;
+  display: grid;
+  gap: 6px;
+  background: rgba(7, 16, 34, 0.7);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.special-block-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: #e8edff;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.special-block-item input[type='checkbox'] {
+  accent-color: #7fb4ff;
+  margin-top: 1px;
+  width: 13px;
+  height: 13px;
 }
 
 .bgm-track-item {

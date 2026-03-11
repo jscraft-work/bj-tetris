@@ -37,6 +37,10 @@ function getRandomItem(items) {
 }
 
 function getAvailablePieceTypes(includeSpecialBlocks) {
+  if (Array.isArray(includeSpecialBlocks)) {
+    const enabledSpecialBlocks = SPECIAL_BLOCK_TYPES.filter((type) => includeSpecialBlocks.includes(type));
+    return [...STANDARD_PIECE_TYPES, ...enabledSpecialBlocks];
+  }
   return includeSpecialBlocks ? PIECE_TYPES : STANDARD_PIECE_TYPES;
 }
 
@@ -112,6 +116,7 @@ export function setSpecialBlocksEnabled(state, enabled) {
     return;
   }
   state.specialBlocksEnabled = nextValue;
+  state.specialBlockTypes = nextValue ? SPECIAL_BLOCK_TYPES.slice() : [];
 
   if (!nextValue) {
     if (state.active && isSpecialBlockType(state.active.type)) {
@@ -127,7 +132,7 @@ export function setSpecialBlocksEnabled(state, enabled) {
   }
 
   if (!state.next) {
-    state.next = createPiece(undefined, state.specialBlocksEnabled);
+    state.next = createPiece(undefined, state.specialBlockTypes);
   }
 }
 
@@ -189,14 +194,22 @@ function setImpactVfx(state) {
 }
 
 export function createInitialState(options = {}) {
-  const specialBlocksEnabled = options.specialBlocksEnabled !== false;
+  const hasSpecialBlockTypesOption = Array.isArray(options.specialBlockTypes);
+  let specialBlockTypes = hasSpecialBlockTypesOption
+    ? SPECIAL_BLOCK_TYPES.filter((type) => options.specialBlockTypes.includes(type))
+    : SPECIAL_BLOCK_TYPES.slice();
+  if (options.specialBlocksEnabled === false) {
+    specialBlockTypes = [];
+  }
+  const specialBlocksEnabled = specialBlockTypes.length > 0;
   pieceSerial = 1;
   return {
     status: 'idle',
     board: makeBoard(),
     specialBlocksEnabled,
-    active: createPiece(undefined, specialBlocksEnabled),
-    next: createPiece(undefined, specialBlocksEnabled),
+    specialBlockTypes,
+    active: createPiece(undefined, specialBlockTypes),
+    next: createPiece(undefined, specialBlockTypes),
     score: 0,
     lines: 0,
     level: 1,
@@ -342,7 +355,7 @@ function clearFullLines(state) {
 
 export function spawnNextPiece(state) {
   state.active = state.next;
-  state.next = createPiece(undefined, state.specialBlocksEnabled);
+  state.next = createPiece(undefined, state.specialBlockTypes);
   state.groundedAt = null;
   emitEvent(state, 'piece_spawned');
   if (!canPlacePiece(state, state.active)) {

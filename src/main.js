@@ -26,7 +26,7 @@ import {
   getBgmTrackIndex,
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
-import { SFX_KEYS } from './constants.js';
+import { SFX_KEYS, SPECIAL_BLOCK_TYPES } from './constants.js';
 import {
   login,
   getCurrentUser,
@@ -56,8 +56,10 @@ const ctrlRotate = document.getElementById('ctrlRotate');
 const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
-const toggleSpecialBlocksBtn = document.getElementById('toggleSpecialBlocksBtn');
+const toggleSpecialBlocksAllBtn = document.getElementById('toggleSpecialBlocksAllBtn');
+const specialBlockSelectContainer = document.getElementById('specialBlockList');
 const toggleBgmBtn = document.getElementById('toggleBgmBtn');
+const toggleBgmTracksAllBtn = document.getElementById('toggleBgmTracksAllBtn');
 const exitToLobbyBtn = document.getElementById('exitToLobbyBtn');
 const loginBtn = document.getElementById('loginBtn');
 const loginIdInput = document.getElementById('loginId');
@@ -91,18 +93,19 @@ const BOARD_TOUCH_THRESHOLD = 14;
 const BOARD_TOUCH_UP_HARD_DROP_MIN = 28;
 
 const SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.specialBlocksEnabled';
+const SPECIAL_BLOCK_TYPES_STORAGE_KEY = 'tetris.specialBlockTypes';
 const LEGACY_SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
 const MUSIC_ENABLED_STORAGE_KEY = 'tetris.musicEnabled';
 const BGM_TRACK_INDEX_STORAGE_KEY = 'tetris.bgmTrackIndex';
 const MAX_BGM_TRACK_LABEL_LENGTH = 26;
+let selectedSpecialBlockTypes = readSpecialBlockTypes();
 let gameState = createInitialState({
-  specialBlocksEnabled: readSpecialBlockSetting(),
+  specialBlockTypes: selectedSpecialBlockTypes,
 });
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
 let nextLayout = resizeNextCanvas(nextCanvas);
 let bgmTrackNames = [];
-let specialBlocksEnabled = gameState.specialBlocksEnabled;
 let musicEnabled = readMusicEnabledSetting();
 let selectedBgmTrackIndexes = readBgmTrackSelection();
 let pointerLock = false;
@@ -126,26 +129,47 @@ const boardMovePointers = new Map();
 setMusicEnabled(musicEnabled);
 setBgmTrackIndex(selectedBgmTrackIndexes);
 
-function readSpecialBlockSetting() {
-  try {
-    const value = localStorage.getItem(SPECIAL_BLOCKS_STORAGE_KEY);
-    if (value !== null) {
-      return value === 'true';
+function normalizeSelectedSpecialBlockTypes(raw = []) {
+  const source = Array.isArray(raw) ? raw : [];
+  const normalized = [];
+  SPECIAL_BLOCK_TYPES.forEach((type) => {
+    if (source.includes(type) && !normalized.includes(type)) {
+      normalized.push(type);
     }
+  });
+  return normalized;
+}
+
+function readSpecialBlockTypes() {
+  try {
+    const value = localStorage.getItem(SPECIAL_BLOCK_TYPES_STORAGE_KEY);
+    if (value && value.startsWith('[')) {
+      const parsed = JSON.parse(value);
+      return normalizeSelectedSpecialBlockTypes(parsed);
+    }
+
+    const enabledValue = localStorage.getItem(SPECIAL_BLOCKS_STORAGE_KEY);
+    if (enabledValue !== null) {
+      return enabledValue === 'true' ? SPECIAL_BLOCK_TYPES.slice() : [];
+    }
+
     const legacyValue = localStorage.getItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY);
     if (legacyValue !== null) {
-      return legacyValue === 'true';
+      return legacyValue === 'true' ? SPECIAL_BLOCK_TYPES.slice() : [];
     }
-    return true;
+
+    return SPECIAL_BLOCK_TYPES.slice();
   } catch {
-    return true;
+    return SPECIAL_BLOCK_TYPES.slice();
   }
 }
 
-function persistSpecialBlockSetting(value) {
+function persistSpecialBlockTypes(values) {
+  const normalized = normalizeSelectedSpecialBlockTypes(values);
   try {
-    localStorage.setItem(SPECIAL_BLOCKS_STORAGE_KEY, String(!!value));
-    localStorage.setItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY, String(!!value));
+    localStorage.setItem(SPECIAL_BLOCK_TYPES_STORAGE_KEY, JSON.stringify(normalized));
+    localStorage.setItem(SPECIAL_BLOCKS_STORAGE_KEY, String(normalized.length > 0));
+    localStorage.setItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY, String(normalized.length > 0));
   } catch {}
 }
 
@@ -226,6 +250,36 @@ function normalizeSelectedTrackIndexes(raw = []) {
     .sort((a, b) => a - b);
 }
 
+function formatSpecialBlockLabel(type) {
+  if (type === 'D') return 'D (Poop)';
+  if (type === 'd') return 'd (Mario)';
+  return `Block ${type}`;
+}
+
+function renderSpecialBlockCheckboxes() {
+  if (!specialBlockSelectContainer) {
+    return;
+  }
+
+  specialBlockSelectContainer.innerHTML = '';
+  SPECIAL_BLOCK_TYPES.forEach((type) => {
+    const label = document.createElement('label');
+    label.className = 'special-block-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = type;
+    checkbox.checked = selectedSpecialBlockTypes.includes(type);
+
+    const text = document.createElement('span');
+    text.textContent = formatSpecialBlockLabel(type);
+
+    label.append(checkbox, text);
+    specialBlockSelectContainer.appendChild(label);
+  });
+  updateSettingsTexts();
+}
+
 function renderBgmTrackCheckboxes() {
   if (!bgmTrackSelectContainer) {
     return;
@@ -276,11 +330,17 @@ function formatTrackLabel(track) {
 }
 
 function updateSettingsTexts() {
-  if (toggleSpecialBlocksBtn) {
-    toggleSpecialBlocksBtn.textContent = `SPECIAL BLOCKS ${specialBlocksEnabled ? 'ON' : 'OFF'}`;
+  if (toggleSpecialBlocksAllBtn) {
+    const allSelected = selectedSpecialBlockTypes.length === SPECIAL_BLOCK_TYPES.length;
+    toggleSpecialBlocksAllBtn.textContent = allSelected ? '특수블록 전체 해제' : '특수블록 전체 선택';
   }
   if (toggleBgmBtn) {
     toggleBgmBtn.textContent = `BGM ${musicEnabled ? 'ON' : 'OFF'}`;
+  }
+  if (toggleBgmTracksAllBtn) {
+    const allSelected = bgmTrackNames.length > 0 && selectedBgmTrackIndexes.length === bgmTrackNames.length;
+    toggleBgmTracksAllBtn.textContent = allSelected ? '음원 전체 해제' : '음원 전체 선택';
+    toggleBgmTracksAllBtn.disabled = !bgmTrackNames.length;
   }
 
   if (bgmTrackSelectContainer) {
@@ -528,7 +588,7 @@ function updateOverlay() {
 
 function hardRestart() {
   gameState = createInitialState({
-    specialBlocksEnabled,
+    specialBlockTypes: selectedSpecialBlockTypes,
   });
   ensureAudioReady();
   gameState.status = 'playing';
@@ -573,13 +633,6 @@ function onOverlayAction() {
   }
 }
 
-function toggleSpecialBlocks() {
-  specialBlocksEnabled = !specialBlocksEnabled;
-  persistSpecialBlockSetting(specialBlocksEnabled);
-  applyHud();
-  updateSettingsTexts();
-}
-
 function toggleBgm() {
   musicEnabled = !musicEnabled;
   setMusicEnabled(musicEnabled);
@@ -590,6 +643,60 @@ function toggleBgm() {
   } else {
     stopBackgroundMusic();
   }
+  updateSettingsTexts();
+}
+
+function toggleAllSpecialBlocks() {
+  if (selectedSpecialBlockTypes.length === SPECIAL_BLOCK_TYPES.length) {
+    selectedSpecialBlockTypes = [];
+  } else {
+    selectedSpecialBlockTypes = SPECIAL_BLOCK_TYPES.slice();
+  }
+  persistSpecialBlockTypes(selectedSpecialBlockTypes);
+  renderSpecialBlockCheckboxes();
+  updateSettingsTexts();
+}
+
+function onSpecialBlockSelectChange(event) {
+  if (!event.target || event.target.type !== 'checkbox') {
+    return;
+  }
+
+  const type = String(event.target.value || '');
+  const next = selectedSpecialBlockTypes.slice();
+  if (event.target.checked) {
+    if (!next.includes(type)) {
+      next.push(type);
+    }
+  } else {
+    const index = next.indexOf(type);
+    if (index >= 0) {
+      next.splice(index, 1);
+    }
+  }
+
+  selectedSpecialBlockTypes = normalizeSelectedSpecialBlockTypes(next);
+  persistSpecialBlockTypes(selectedSpecialBlockTypes);
+  updateSettingsTexts();
+}
+
+function toggleAllBgmTracks() {
+  if (!bgmTrackNames.length) {
+    return;
+  }
+  if (selectedBgmTrackIndexes.length === bgmTrackNames.length) {
+    selectedBgmTrackIndexes = [];
+  } else {
+    selectedBgmTrackIndexes = bgmTrackNames.map((_, index) => index);
+  }
+  selectedBgmTrackIndexes = normalizeSelectedTrackIndexes(selectedBgmTrackIndexes);
+  persistBgmTrackSelection(selectedBgmTrackIndexes);
+  setBgmTrackIndex(selectedBgmTrackIndexes);
+  if (musicEnabled) {
+    ensureAudioReady();
+    startBackgroundMusic();
+  }
+  renderBgmTrackCheckboxes();
   updateSettingsTexts();
 }
 
@@ -1126,15 +1233,24 @@ if (toggleBgmBtn) {
     toggleBgm();
   });
 }
+if (toggleBgmTracksAllBtn) {
+  toggleBgmTracksAllBtn.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    toggleAllBgmTracks();
+  });
+}
 if (bgmTrackSelectContainer) {
   bgmTrackSelectContainer.addEventListener('change', onBgmTrackSelectChange);
 }
+if (specialBlockSelectContainer) {
+  specialBlockSelectContainer.addEventListener('change', onSpecialBlockSelectChange);
+}
 restartBtn.addEventListener('click', onStartClick);
 restartBtn.addEventListener('pointerdown', onStartClick);
-if (toggleSpecialBlocksBtn) {
-  toggleSpecialBlocksBtn.addEventListener('pointerdown', (event) => {
+if (toggleSpecialBlocksAllBtn) {
+  toggleSpecialBlocksAllBtn.addEventListener('pointerdown', (event) => {
     event.preventDefault();
-    toggleSpecialBlocks();
+    toggleAllSpecialBlocks();
   });
 }
 if (boardArea) {
@@ -1276,6 +1392,7 @@ if (rankTabMy) {
 // ── Popup Show/Hide ──
 function showSettingsPopup() {
   if (settingsPopup) settingsPopup.classList.remove('hidden');
+  renderSpecialBlockCheckboxes();
   loadBgmTrackList();
   updateSettingsTexts();
 }
@@ -1332,7 +1449,7 @@ function navigateToLobby(user) {
 }
 
 function startGameFromLobby() {
-  gameState = createInitialState({ specialBlocksEnabled });
+  gameState = createInitialState({ specialBlockTypes: selectedSpecialBlockTypes });
   gameState.status = 'playing';
   ensureAudioReady();
   startBackgroundMusic();
@@ -1349,7 +1466,7 @@ function startGameFromLobby() {
 function exitToLobby() {
   stopBackgroundMusic();
   stopAllMovementInputs();
-  gameState = createInitialState({ specialBlocksEnabled });
+  gameState = createInitialState({ specialBlockTypes: selectedSpecialBlockTypes });
   hideSettingsPopup();
   hideRankingPopup();
   showScreen('lobby');

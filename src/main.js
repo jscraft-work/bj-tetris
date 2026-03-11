@@ -13,6 +13,7 @@ import {
   hardDropPiece,
   togglePause,
   drainEvents,
+  setPoopSplashEnabled,
 } from './state.js';
 import {
   initAudio,
@@ -58,6 +59,7 @@ const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
 const toggleSpecialBlocksAllBtn = document.getElementById('toggleSpecialBlocksAllBtn');
 const specialBlockSelectContainer = document.getElementById('specialBlockList');
+const togglePoopSplashBtn = document.getElementById('togglePoopSplashBtn');
 const toggleBgmBtn = document.getElementById('toggleBgmBtn');
 const toggleBgmTracksAllBtn = document.getElementById('toggleBgmTracksAllBtn');
 const exitToLobbyBtn = document.getElementById('exitToLobbyBtn');
@@ -95,12 +97,15 @@ const BOARD_TOUCH_UP_HARD_DROP_MIN = 28;
 const SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.specialBlocksEnabled';
 const SPECIAL_BLOCK_TYPES_STORAGE_KEY = 'tetris.specialBlockTypes';
 const LEGACY_SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
+const POOP_SPLASH_ENABLED_STORAGE_KEY = 'tetris.poopSplashEnabled';
 const MUSIC_ENABLED_STORAGE_KEY = 'tetris.musicEnabled';
 const BGM_TRACK_INDEX_STORAGE_KEY = 'tetris.bgmTrackIndex';
 const MAX_BGM_TRACK_LABEL_LENGTH = 26;
 let selectedSpecialBlockTypes = readSpecialBlockTypes();
+let poopSplashEnabled = readPoopSplashEnabledSetting();
 let gameState = createInitialState({
   specialBlockTypes: selectedSpecialBlockTypes,
+  poopSplashEnabled,
 });
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
@@ -170,6 +175,24 @@ function persistSpecialBlockTypes(values) {
     localStorage.setItem(SPECIAL_BLOCK_TYPES_STORAGE_KEY, JSON.stringify(normalized));
     localStorage.setItem(SPECIAL_BLOCKS_STORAGE_KEY, String(normalized.length > 0));
     localStorage.setItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY, String(normalized.length > 0));
+  } catch {}
+}
+
+function readPoopSplashEnabledSetting() {
+  try {
+    const value = localStorage.getItem(POOP_SPLASH_ENABLED_STORAGE_KEY);
+    if (value === null) {
+      return true;
+    }
+    return value === 'true';
+  } catch {
+    return true;
+  }
+}
+
+function persistPoopSplashEnabledSetting(value) {
+  try {
+    localStorage.setItem(POOP_SPLASH_ENABLED_STORAGE_KEY, String(!!value));
   } catch {}
 }
 
@@ -335,6 +358,9 @@ function updateSettingsTexts() {
   if (toggleSpecialBlocksAllBtn) {
     const allSelected = selectedSpecialBlockTypes.length === SPECIAL_BLOCK_TYPES.length;
     toggleSpecialBlocksAllBtn.textContent = allSelected ? '특수블록 전체 해제' : '특수블록 전체 선택';
+  }
+  if (togglePoopSplashBtn) {
+    togglePoopSplashBtn.textContent = `똥 퍼짐 ${poopSplashEnabled ? 'ON' : 'OFF'}`;
   }
   if (toggleBgmBtn) {
     toggleBgmBtn.textContent = `BGM ${musicEnabled ? 'ON' : 'OFF'}`;
@@ -591,6 +617,7 @@ function updateOverlay() {
 function hardRestart() {
   gameState = createInitialState({
     specialBlockTypes: selectedSpecialBlockTypes,
+    poopSplashEnabled,
   });
   ensureAudioReady();
   gameState.status = 'playing';
@@ -645,6 +672,13 @@ function toggleBgm() {
   } else {
     stopBackgroundMusic();
   }
+  updateSettingsTexts();
+}
+
+function togglePoopSplash() {
+  poopSplashEnabled = !poopSplashEnabled;
+  persistPoopSplashEnabledSetting(poopSplashEnabled);
+  setPoopSplashEnabled(gameState, poopSplashEnabled);
   updateSettingsTexts();
 }
 
@@ -1235,6 +1269,12 @@ if (toggleBgmBtn) {
     toggleBgm();
   });
 }
+if (togglePoopSplashBtn) {
+  togglePoopSplashBtn.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    togglePoopSplash();
+  });
+}
 if (toggleBgmTracksAllBtn) {
   toggleBgmTracksAllBtn.addEventListener('pointerdown', (event) => {
     event.preventDefault();
@@ -1451,7 +1491,10 @@ function navigateToLobby(user) {
 }
 
 function startGameFromLobby() {
-  gameState = createInitialState({ specialBlockTypes: selectedSpecialBlockTypes });
+  gameState = createInitialState({
+    specialBlockTypes: selectedSpecialBlockTypes,
+    poopSplashEnabled,
+  });
   gameState.status = 'playing';
   ensureAudioReady();
   startBackgroundMusic();
@@ -1468,7 +1511,10 @@ function startGameFromLobby() {
 function exitToLobby() {
   stopBackgroundMusic();
   stopAllMovementInputs();
-  gameState = createInitialState({ specialBlockTypes: selectedSpecialBlockTypes });
+  gameState = createInitialState({
+    specialBlockTypes: selectedSpecialBlockTypes,
+    poopSplashEnabled,
+  });
   hideSettingsPopup();
   hideRankingPopup();
   showScreen('lobby');

@@ -10,6 +10,7 @@ export const VFX_LINE_CLEAR_MS = 110;
 export const VFX_LINE_FADE_MS = 350;
 export const VFX_IMPACT_MS = 100;
 export const VFX_ALL_CLEAR_MS = 2500;
+export const VFX_POOP_SPLASH_MS = 420;
 export const LOCK_DELAY_MS = 200;
 
 export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
@@ -91,6 +92,7 @@ export const SPECIAL_BLOCK_IMAGES = {
   3: './assets/blocks/3.png',
   4: './assets/blocks/4.png',
   D: './assets/blocks/poop.svg',
+  p: './assets/blocks/poop-mini.svg',
   d: './assets/blocks/d.svg',
   b: './assets/blocks/b.svg',
   F: './assets/blocks/fridge.svg',

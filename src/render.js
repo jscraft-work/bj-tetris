@@ -7,6 +7,7 @@ import {
   VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
   VFX_ALL_CLEAR_MS,
+  VFX_POOP_SPLASH_MS,
 } from './constants.js';
 import { getGhostPiece } from './state.js';
 
@@ -81,6 +82,10 @@ function getCellMeta(cell) {
     type: null,
     pieceId: null,
   };
+}
+
+function isMiniPoopType(type) {
+  return String(type) === 'p';
 }
 
 function getBoardBounds() {
@@ -300,6 +305,43 @@ function drawImpactPulse(ctx, state, layout, now) {
   ctx.save();
   ctx.fillStyle = `rgba(255,255,255,${alpha})`;
   ctx.fillRect(0, startRow * cell, BOARD_WIDTH * cell, (endRow - startRow + 1) * cell);
+  ctx.restore();
+}
+
+function drawPoopSplash(ctx, state, layout, now) {
+  const remaining = state.vfx.poopSplashUntil - now;
+  if (remaining <= 0) {
+    return;
+  }
+
+  const cells = state.vfx.poopSplashCells || [];
+  if (!cells.length) {
+    return;
+  }
+
+  const progress = 1 - remaining / VFX_POOP_SPLASH_MS;
+  const alpha = Math.max(0, 0.62 * (1 - progress));
+  const { cell } = layout;
+
+  ctx.save();
+  cells.forEach(({ x, y }, index) => {
+    const cx = (x + 0.5) * cell;
+    const cy = (y + 0.5) * cell;
+    const droplets = 10;
+    for (let i = 0; i < droplets; i += 1) {
+      const angle = ((index * 31 + i * 67) % 360) * (Math.PI / 180);
+      const radius = (0.1 + progress * 0.82) * cell;
+      const px = cx + Math.cos(angle) * radius;
+      const py = cy + Math.sin(angle) * radius;
+      const size = Math.max(1.6, cell * (0.075 + 0.038 * (i % 2)));
+      ctx.fillStyle = `rgba(120, 74, 35, ${alpha})`;
+      ctx.fillRect(px - size / 2, py - size / 2, size, size);
+
+      const highlight = Math.max(1, size * 0.45);
+      ctx.fillStyle = `rgba(186, 128, 86, ${alpha * 0.55})`;
+      ctx.fillRect(px - highlight / 2, py - highlight / 2, highlight, highlight);
+    }
+  });
   ctx.restore();
 }
 
@@ -542,16 +584,18 @@ export function render(state, layout, ctx, now = Date.now()) {
         continue;
       }
       const boardMeta = getCellMeta(boardCell);
+      const useMiniPoopImage = isMiniPoopType(boardMeta.type);
+      const cellGlow = !useMiniPoopImage;
       if (isClearing) {
         // Fade out: full alpha at start → 0 at end
         const alpha = Math.max(0, 1 - clearingProgress);
-        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true, alpha, {
-          useImage: false,
+        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, cellGlow, alpha, {
+          useImage: useMiniPoopImage,
           type: boardMeta.type,
         });
       } else {
-        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, true, 1, {
-          useImage: false,
+        drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, cellGlow, 1, {
+          useImage: useMiniPoopImage,
           type: boardMeta.type,
         });
       }
@@ -608,5 +652,6 @@ export function render(state, layout, ctx, now = Date.now()) {
     }
   }
 
+  drawPoopSplash(ctx, state, layout, now);
   drawAllClear(ctx, state, layout, now);
 }

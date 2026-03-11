@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <linearGradient id="miniPoopGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b47a45"/>
+      <stop offset="55%" stop-color="#8b5a2b"/>
+      <stop offset="100%" stop-color="#613a1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" fill="none"/>
+  <path
+    fill="url(#miniPoopGradient)"
+    d="M49 12
+       c-10 0-17 7-17 17
+       c0 4 1 8 3 11
+       c-11 3-19 13-19 24
+       c0 14 12 26 26 26
+       h11
+       c14 0 26-12 26-26
+       c0-11-7-20-17-23
+       c1-3 2-5 2-8
+       c0-11-8-21-20-21z"/>
+  <circle cx="38" cy="57" r="3.5" fill="#2f1f12"/>
+  <circle cx="57" cy="57" r="3.5" fill="#2f1f12"/>
+  <path d="M39 67c4 4 13 4 17 0" fill="none" stroke="#2f1f12" stroke-width="3" stroke-linecap="round"/>
+</svg>

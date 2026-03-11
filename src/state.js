@@ -1,6 +1,7 @@
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
+  VISIBLE_HEIGHT,
   HIDDEN_HEIGHT,
   PIECE_TYPES,
   STANDARD_PIECE_TYPES,
@@ -16,10 +17,13 @@ import {
   VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
   VFX_ALL_CLEAR_MS,
+  VFX_POOP_SPLASH_MS,
   LOCK_DELAY_MS,
 } from './constants.js';
 
 let pieceSerial = 1;
+const POOP_SPLASH_MIN = 1;
+const POOP_SPLASH_MAX = 5;
 
 function cloneShape(shape) {
   return shape.map((row) => row.slice());
@@ -136,6 +140,18 @@ export function setSpecialBlocksEnabled(state, enabled) {
   }
 }
 
+export function setPoopSplashEnabled(state, enabled) {
+  const nextValue = !!enabled;
+  if (state.poopSplashEnabled === nextValue) {
+    return;
+  }
+  state.poopSplashEnabled = nextValue;
+  if (!nextValue) {
+    state.vfx.poopSplashUntil = 0;
+    state.vfx.poopSplashCells = [];
+  }
+}
+
 function getDropMsForState(state) {
   return Math.max(MIN_DROP_MS, Math.floor(state.softDrop ? state.dropMs * SOFT_DROP_FACTOR : state.dropMs));
 }
@@ -202,11 +218,13 @@ export function createInitialState(options = {}) {
     specialBlockTypes = [];
   }
   const specialBlocksEnabled = specialBlockTypes.length > 0;
+  const poopSplashEnabled = options.poopSplashEnabled !== false;
   pieceSerial = 1;
   return {
     status: 'idle',
     board: makeBoard(),
     specialBlocksEnabled,
+    poopSplashEnabled,
     specialBlockTypes,
     active: createPiece(undefined, specialBlockTypes),
     next: createPiece(undefined, specialBlockTypes),
@@ -227,6 +245,8 @@ export function createInitialState(options = {}) {
       impactUntil: 0,
       impactRows: [],
       allClearUntil: 0,
+      poopSplashUntil: 0,
+      poopSplashCells: [],
     },
   };
 }
@@ -279,6 +299,128 @@ export function getGhostPiece(state) {
   }
 
   return ghost;
+}
+
+function isPoopBlock(piece) {
+  return !!piece && piece.type === 'D';
+}
+
+function getPieceOccupiedCells(piece) {
+  const cells = [];
+  if (!piece) {
+    return cells;
+  }
+
+  for (let py = 0; py < piece.shape.length; py += 1) {
+    for (let px = 0; px < piece.shape[py].length; px += 1) {
+      if (!piece.shape[py][px]) {
+        continue;
+      }
+      const x = piece.x + px;
+      const y = piece.y + py;
+      if (x < 0 || x >= BOARD_WIDTH || y < 0 || y >= BOARD_HEIGHT) {
+        continue;
+      }
+      cells.push({ x, y });
+    }
+  }
+
+  return cells;
+}
+
+function getPoopCandidateCells(state, piece) {
+  const occupiedCells = getPieceOccupiedCells(piece);
+  if (!occupiedCells.length) {
+    return [];
+  }
+
+  const occupiedSet = new Set(occupiedCells.map(({ x, y }) => `${x}:${y}`));
+  const candidateSet = new Set();
+  const candidates = [];
+  const spreadRadiusX = 4;
+  const spreadRadiusY = 2;
+
+  occupiedCells.forEach(({ x, y }) => {
+    for (let dx = -spreadRadiusX; dx <= spreadRadiusX; dx += 1) {
+      for (let dy = -spreadRadiusY; dy <= spreadRadiusY; dy += 1) {
+        if (dx === 0 && dy === 0) {
+          continue;
+        }
+        if (Math.abs(dx) + Math.abs(dy) > 5) {
+          continue;
+        }
+        const nx = x + dx;
+        const ny = y + dy;
+        const key = `${nx}:${ny}`;
+        if (nx < 0 || nx >= BOARD_WIDTH || ny < HIDDEN_HEIGHT || ny >= BOARD_HEIGHT) {
+          continue;
+        }
+        if (occupiedSet.has(key) || candidateSet.has(key)) {
+          continue;
+        }
+        if (state.board[ny][nx] !== 0) {
+          continue;
+        }
+        candidateSet.add(key);
+        candidates.push({ x: nx, y: ny });
+      }
+    }
+  });
+
+  return candidates;
+}
+
+function sprinklePoopCell(state, piece) {
+  const candidates = getPoopCandidateCells(state, piece);
+  if (!candidates.length) {
+    return null;
+  }
+
+  const target = getRandomItem(candidates);
+  if (!target) {
+    return null;
+  }
+
+  let landingY = target.y;
+  while (landingY + 1 < BOARD_HEIGHT && state.board[landingY + 1][target.x] === 0) {
+    landingY += 1;
+  }
+
+  state.board[landingY][target.x] = {
+    color: PIECE_COLOR.D,
+    type: 'p',
+    pieceId: piece.pieceId,
+  };
+  return { x: target.x, y: landingY };
+}
+
+function setPoopSplashVfx(state, cells) {
+  const visibleCells = cells
+    .map(({ x, y }) => ({ x, y: y - HIDDEN_HEIGHT }))
+    .filter(({ y }) => y >= 0 && y < state.board.length - HIDDEN_HEIGHT);
+  if (!visibleCells.length) {
+    return;
+  }
+  state.vfx.poopSplashUntil = Date.now() + VFX_POOP_SPLASH_MS;
+  state.vfx.poopSplashCells = visibleCells;
+}
+
+function sprinklePoopBurstOnLock(state, piece) {
+  const targetCount = POOP_SPLASH_MIN + Math.floor(Math.random() * (POOP_SPLASH_MAX - POOP_SPLASH_MIN + 1));
+  const sprayedCells = [];
+  let attempts = 0;
+  const maxAttempts = targetCount * 10;
+  while (sprayedCells.length < targetCount && attempts < maxAttempts) {
+    const placed = sprinklePoopCell(state, piece);
+    if (placed) {
+      sprayedCells.push(placed);
+    }
+    attempts += 1;
+  }
+
+  if (sprayedCells.length) {
+    setPoopSplashVfx(state, sprayedCells);
+  }
 }
 
 function lockActivePiece(state) {
@@ -428,12 +570,19 @@ function finishClearing(state) {
 }
 
 function settleActive(state) {
+  const activePiece = state.active;
   const overflow = lockActivePiece(state);
 
   if (overflow) {
     state.status = 'gameover';
     emitEvent(state, 'game_over');
     return;
+  }
+
+  if (state.poopSplashEnabled && isPoopBlock(activePiece)) {
+    try {
+      sprinklePoopBurstOnLock(state, activePiece);
+    } catch {}
   }
 
   const fullRows = findFullRows(state.board);

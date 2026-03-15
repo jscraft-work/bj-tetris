@@ -87,6 +87,7 @@ export const PIECE_COLOR = {
 };
 
 export const SPECIAL_BLOCK_IMAGES = {
+  O: './assets/blocks/question-block.svg',
   1: './assets/blocks/1.png',
   2: './assets/blocks/2.png',
   3: './assets/blocks/3.png',

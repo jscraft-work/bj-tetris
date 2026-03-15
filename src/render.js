@@ -585,17 +585,18 @@ export function render(state, layout, ctx, now = Date.now()) {
       }
       const boardMeta = getCellMeta(boardCell);
       const useMiniPoopImage = isMiniPoopType(boardMeta.type);
-      const cellGlow = !useMiniPoopImage;
+      const useCellImage = useMiniPoopImage;
+      const cellGlow = !useCellImage;
       if (isClearing) {
         // Fade out: full alpha at start → 0 at end
         const alpha = Math.max(0, 1 - clearingProgress);
         drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, cellGlow, alpha, {
-          useImage: useMiniPoopImage,
+          useImage: useCellImage,
           type: boardMeta.type,
         });
       } else {
         drawCell(ctx, x, y - HIDDEN_HEIGHT, cell, boardMeta.color, cellGlow, 1, {
-          useImage: useMiniPoopImage,
+          useImage: useCellImage,
           type: boardMeta.type,
         });
       }

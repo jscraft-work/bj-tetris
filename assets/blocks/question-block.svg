@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" shape-rendering="crispEdges">
+  <rect width="160" height="160" fill="none"/>
+
+  <!-- Outer frame -->
+  <rect x="4" y="4" width="152" height="152" fill="#8f5512"/>
+  <rect x="10" y="10" width="140" height="140" fill="#f4ab1f"/>
+
+  <!-- Inner checker shading -->
+  <rect x="10" y="10" width="70" height="70" fill="#f7ba42"/>
+  <rect x="80" y="80" width="70" height="70" fill="#f7ba42"/>
+
+  <!-- Tile seams -->
+  <rect x="78" y="10" width="4" height="140" fill="#c07c1a"/>
+  <rect x="10" y="78" width="140" height="4" fill="#c07c1a"/>
+
+  <!-- Top-left highlight -->
+  <rect x="10" y="10" width="140" height="8" fill="#ffd37b" opacity="0.45"/>
+  <rect x="10" y="10" width="8" height="140" fill="#ffd37b" opacity="0.22"/>
+
+  <!-- Question mark -->
+  <rect x="66" y="42" width="10" height="10" fill="#ffffff"/>
+  <rect x="76" y="42" width="10" height="10" fill="#ffffff"/>
+  <rect x="86" y="52" width="10" height="10" fill="#ffffff"/>
+  <rect x="76" y="62" width="10" height="10" fill="#ffffff"/>
+  <rect x="76" y="72" width="10" height="10" fill="#ffffff"/>
+  <rect x="76" y="92" width="10" height="10" fill="#ffffff"/>
+
+  <!-- Rivets -->
+  <rect x="24" y="24" width="8" height="8" fill="#c07c1a"/>
+  <rect x="128" y="24" width="8" height="8" fill="#c07c1a"/>
+  <rect x="24" y="128" width="8" height="8" fill="#c07c1a"/>
+  <rect x="128" y="128" width="8" height="8" fill="#c07c1a"/>
+</svg>

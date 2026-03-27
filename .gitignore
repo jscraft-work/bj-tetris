@@ -11,3 +11,7 @@ android/captures/
 android/app/release/
 android/*.apk
 *.iml
+
+# Server
+server/.gradle/
+server/build/

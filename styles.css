@@ -51,19 +51,11 @@ body {
   letter-spacing: 0.15em;
 }
 
-.login-form input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #5f74a6;
-  border-radius: 8px;
-  background: rgba(15, 24, 48, 0.9);
-  color: #ecf0ff;
-  font-size: 14px;
-  outline: none;
-}
-
-.login-form input:focus {
-  border-color: #7fb4ff;
+.login-description {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #aab8d8;
 }
 
 .login-error {

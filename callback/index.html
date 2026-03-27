@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Callback</title>
+</head>
+<body>
+    <h2>Callback</h2>
+    <pre id="result"></pre>
+
+    <script>
+        window.__BJ_TETRIS_AUTH_CONFIG__ = {
+            issuer: 'http://127.0.0.1:9000',
+            authorizeEndpoint: 'http://127.0.0.1:9000/oauth2/authorize',
+            tokenEndpoint: 'http://127.0.0.1:9000/oauth2/token',
+            userInfoEndpoint: 'http://127.0.0.1:9000/userinfo',
+            endSessionEndpoint: 'http://127.0.0.1:9000/connect/logout',
+            jwksUri: 'http://127.0.0.1:9000/oauth2/jwks',
+            clientId: 'bj-tetris-web',
+            redirectUri: new URL('../callback', window.location.href).toString(),
+            scope: 'openid',
+        };
+    </script>
+    <script type="module">
+        import { exchangeAuthorizationCode } from "../src/services/auth.js";
+
+        const result = document.getElementById("result");
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        const state = params.get("state");
+        const error = params.get("error");
+        const errorDescription = params.get("error_description");
+
+        if (error) {
+            result.textContent = `error: ${error}\nerror_description: ${errorDescription || ""}`;
+        } else {
+            result.textContent = "토큰 교환 중...";
+
+            try {
+                const tokenResponse = await exchangeAuthorizationCode(code, state);
+                result.textContent = JSON.stringify({
+                    code,
+                    state,
+                    tokenResponse,
+                }, null, 2);
+            } catch (err) {
+                result.textContent = err instanceof Error ? err.message : "토큰 교환 실패";
+            }
+        }
+    </script>
+</body>
+</html>

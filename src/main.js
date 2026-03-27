@@ -28,8 +28,8 @@ import {
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS, SPECIAL_BLOCK_TYPES } from './constants.js';
+import { beginLogin } from './services/auth.js';
 import {
-  login,
   getCurrentUser,
   extractUserId,
   saveGameRecord,
@@ -64,8 +64,6 @@ const toggleBgmBtn = document.getElementById('toggleBgmBtn');
 const toggleBgmTracksAllBtn = document.getElementById('toggleBgmTracksAllBtn');
 const exitToLobbyBtn = document.getElementById('exitToLobbyBtn');
 const loginBtn = document.getElementById('loginBtn');
-const loginIdInput = document.getElementById('loginId');
-const loginPwInput = document.getElementById('loginPw');
 const loginError = document.getElementById('loginError');
 const lobbyUserId = document.getElementById('lobbyUserId');
 const lobbyStartBtn = document.getElementById('lobbyStartBtn');
@@ -1323,36 +1321,14 @@ if (typeof ResizeObserver !== 'undefined' && playLayout && nextPanel) {
 // ── Login Flow ──
 if (loginBtn) {
   loginBtn.addEventListener('click', async () => {
-    const id = loginIdInput.value.trim();
-    const pw = loginPwInput.value;
-
-    if (!id || !pw) {
-      loginError.textContent = 'ID와 비밀번호를 입력하세요.';
-      return;
-    }
-
     loginBtn.disabled = true;
     loginError.textContent = '';
 
     try {
-      const result = await login(id, pw);
-      if (result.user) {
-        navigateToLobby(result.user);
-      } else {
-        loginError.textContent = result.error || '로그인에 실패했습니다.';
-      }
+      await beginLogin();
     } catch (err) {
-      loginError.textContent = '네트워크 오류가 발생했습니다.';
-    }
-
-    loginBtn.disabled = false;
-  });
-}
-
-if (loginPwInput) {
-  loginPwInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      loginBtn.click();
+      loginError.textContent = err instanceof Error ? err.message : '로그인을 시작하지 못했습니다.';
+      loginBtn.disabled = false;
     }
   });
 }
@@ -1532,8 +1508,6 @@ if (lobbyLogoutBtn) {
     const { logout } = await import('./services/supabase.js');
     await logout();
     showScreen('login');
-    if (loginIdInput) loginIdInput.value = '';
-    if (loginPwInput) loginPwInput.value = '';
     if (loginError) loginError.textContent = '';
   });
 }

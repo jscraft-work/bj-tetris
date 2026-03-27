@@ -131,20 +131,6 @@
       </div>
     </div>
 
-    <script>
-      window.__BJ_TETRIS_AUTH_CONFIG__ = {
-        issuer: 'http://127.0.0.1:9000',
-        authorizeEndpoint: 'http://127.0.0.1:9000/oauth2/authorize',
-        tokenEndpoint: 'http://127.0.0.1:9000/oauth2/token',
-        userInfoEndpoint: 'http://127.0.0.1:9000/userinfo',
-        endSessionEndpoint: 'http://127.0.0.1:9000/connect/logout',
-        jwksUri: 'http://127.0.0.1:9000/oauth2/jwks',
-        clientId: 'bj-tetris-web',
-        redirectUri: new URL('./callback', window.location.href).toString(),
-        scope: 'openid',
-      };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>

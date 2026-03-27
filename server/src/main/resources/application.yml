@@ -1,6 +1,32 @@
 spring:
   application:
     name: bj-tetris-server
+  datasource:
+    url: jdbc:h2:file:../data/bjtetris;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 server:
   port: 8080
+
+app:
+  auth:
+    issuer: http://127.0.0.1:9000
+    authorize-endpoint: http://127.0.0.1:9000/oauth2/authorize
+    token-endpoint: http://127.0.0.1:9000/oauth2/token
+    user-info-endpoint: http://127.0.0.1:9000/userinfo
+    client-id: bj-tetris-web
+    scope: openid
+  session:
+    cookie-name: BJ_TETRIS_SESSION
+    cookie-domain:
+    cookie-secure: false
+    max-age-seconds: 1209600

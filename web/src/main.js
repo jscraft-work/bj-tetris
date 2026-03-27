@@ -35,7 +35,8 @@ import {
   saveGameRecord,
   getLeaderboard,
   getMyRecords,
-} from './services/supabase.js';
+  logout,
+} from './services/api.js';
 import { showScreen, getCurrentScreen } from './screen.js';
 import { showConfirm } from './ui/confirm.js';
 
@@ -1505,7 +1506,6 @@ if (lobbyStartBtn) {
 
 if (lobbyLogoutBtn) {
   lobbyLogoutBtn.addEventListener('click', async () => {
-    const { logout } = await import('./services/supabase.js');
     await logout();
     showScreen('login');
     if (loginError) loginError.textContent = '';
@@ -1595,6 +1595,13 @@ window.__onAndroidBack = async () => {
 // ── Initialization ──
 (async () => {
   try {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
+    if (authError && loginError) {
+      loginError.textContent = authError;
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const user = await getCurrentUser();
     if (user) {
       navigateToLobby(user);

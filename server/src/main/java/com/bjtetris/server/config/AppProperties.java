@@ -6,10 +6,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AppProperties {
 
   private final Auth auth = new Auth();
+  private final Frontend frontend = new Frontend();
   private final Session session = new Session();
 
   public Auth getAuth() {
     return auth;
+  }
+
+  public Frontend getFrontend() {
+    return frontend;
   }
 
   public Session getSession() {
@@ -21,6 +26,7 @@ public class AppProperties {
     private String authorizeEndpoint;
     private String tokenEndpoint;
     private String userInfoEndpoint;
+    private String endSessionEndpoint;
     private String clientId;
     private String scope = "openid";
 
@@ -56,6 +62,14 @@ public class AppProperties {
       this.userInfoEndpoint = userInfoEndpoint;
     }
 
+    public String getEndSessionEndpoint() {
+      return endSessionEndpoint;
+    }
+
+    public void setEndSessionEndpoint(String endSessionEndpoint) {
+      this.endSessionEndpoint = endSessionEndpoint;
+    }
+
     public String getClientId() {
       return clientId;
     }
@@ -70,6 +84,18 @@ public class AppProperties {
 
     public void setScope(String scope) {
       this.scope = scope;
+    }
+  }
+
+  public static class Frontend {
+    private String baseUrl = "http://127.0.0.1:5500";
+
+    public String getBaseUrl() {
+      return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+      this.baseUrl = baseUrl;
     }
   }
 

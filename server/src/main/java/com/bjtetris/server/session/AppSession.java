@@ -27,6 +27,9 @@ public class AppSession {
   @jakarta.persistence.Column(name = "session_token", nullable = false, length = 128)
   private String sessionToken;
 
+  @jakarta.persistence.Column(name = "id_token", length = 4096)
+  private String idToken;
+
   @jakarta.persistence.Column(nullable = false)
   private Instant createdAt = Instant.now();
 
@@ -51,6 +54,14 @@ public class AppSession {
 
   public void setSessionToken(String sessionToken) {
     this.sessionToken = sessionToken;
+  }
+
+  public String getIdToken() {
+    return idToken;
+  }
+
+  public void setIdToken(String idToken) {
+    this.idToken = idToken;
   }
 
   public Instant getCreatedAt() {

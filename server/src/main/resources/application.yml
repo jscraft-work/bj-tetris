@@ -2,31 +2,32 @@ spring:
   application:
     name: bj-tetris-server
   datasource:
-    url: jdbc:h2:file:../data/bjtetris;AUTO_SERVER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bj_tetris}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
+  flyway:
+    enabled: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:9001}
 
 app:
   auth:
-    issuer: http://127.0.0.1:9000
-    authorize-endpoint: http://127.0.0.1:9000/oauth2/authorize
-    token-endpoint: http://127.0.0.1:9000/oauth2/token
-    user-info-endpoint: http://127.0.0.1:9000/userinfo
-    client-id: bj-tetris-web
+    issuer: ${AUTH_ISSUER:http://127.0.0.1:9000}
+    authorize-endpoint: ${AUTH_AUTHORIZE_ENDPOINT:http://127.0.0.1:9000/oauth2/authorize}
+    token-endpoint: ${AUTH_TOKEN_ENDPOINT:http://127.0.0.1:9000/oauth2/token}
+    user-info-endpoint: ${AUTH_USERINFO_ENDPOINT:http://127.0.0.1:9000/userinfo}
+    end-session-endpoint: ${AUTH_END_SESSION_ENDPOINT:http://127.0.0.1:9000/connect/logout}
+    client-id: ${AUTH_CLIENT_ID:bj-tetris-web}
     scope: openid
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://127.0.0.1:5500}
   session:
     cookie-name: BJ_TETRIS_SESSION
-    cookie-domain:
-    cookie-secure: false
+    cookie-domain: ${SESSION_COOKIE_DOMAIN:}
+    cookie-secure: ${SESSION_COOKIE_SECURE:false}
     max-age-seconds: 1209600

@@ -1,0 +1,14 @@
+server:
+  forward-headers-strategy: native
+
+app:
+  auth:
+    issuer: https://auth.jscraft.work
+    authorize-endpoint: https://auth.jscraft.work/oauth2/authorize
+    token-endpoint: http://127.0.0.1:9000/oauth2/token
+    user-info-endpoint: http://127.0.0.1:9000/userinfo
+    end-session-endpoint: https://auth.jscraft.work/connect/logout
+  frontend:
+    base-url: https://tetris.jscraft.work
+  session:
+    cookie-secure: true

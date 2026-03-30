@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <script>
+      window.__BJ_TETRIS_CONFIG__ = {
+        backendBaseUrl: window.location.hostname.endsWith('.jscraft.work')
+          ? 'https://tetris-api.jscraft.work'
+          : 'http://127.0.0.1:9001',
+      };
+    </script>
     <main class="shell">
       <!-- LOGIN SCREEN -->
       <section id="screen-login" class="screen">

@@ -24,10 +24,11 @@ public class SessionCookieService {
     this.appSessionRepository = appSessionRepository;
   }
 
-  public AppSession createSession(com.bjtetris.server.user.AppUser user) {
+  public AppSession createSession(com.bjtetris.server.user.AppUser user, String idToken) {
     AppSession session = new AppSession();
     session.setUser(user);
     session.setSessionToken(generateToken());
+    session.setIdToken(idToken);
     session.setCreatedAt(Instant.now());
     session.setExpiresAt(Instant.now().plusSeconds(appProperties.getSession().getMaxAgeSeconds()));
     return appSessionRepository.save(session);

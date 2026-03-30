@@ -1,6 +1,13 @@
+const BACKEND_BASE_URL =
+  (window.__BJ_TETRIS_CONFIG__ && window.__BJ_TETRIS_CONFIG__.backendBaseUrl) || 'http://127.0.0.1:9001';
+
+function buildUrl(path) {
+  return `${BACKEND_BASE_URL}${path}`;
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: 'same-origin',
+  const response = await fetch(buildUrl(path), {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
@@ -50,7 +57,5 @@ export async function getMyRecords(limit = 10) {
 }
 
 export async function logout() {
-  await request('/auth/logout', {
-    method: 'POST',
-  });
+  window.location.assign(buildUrl('/auth/logout'));
 }

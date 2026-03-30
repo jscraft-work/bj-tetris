@@ -28,7 +28,7 @@ import {
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS, SPECIAL_BLOCK_TYPES } from './constants.js';
-import { beginLogin } from './services/auth.js';
+import { beginLogin, clearForcePromptLogin, markForcePromptLogin } from './services/auth.js';
 import {
   getCurrentUser,
   extractUserId,
@@ -1505,10 +1505,9 @@ if (lobbyStartBtn) {
 }
 
 if (lobbyLogoutBtn) {
-  lobbyLogoutBtn.addEventListener('click', async () => {
-    await logout();
-    showScreen('login');
-    if (loginError) loginError.textContent = '';
+  lobbyLogoutBtn.addEventListener('click', () => {
+    markForcePromptLogin();
+    logout();
   });
 }
 
@@ -1604,6 +1603,7 @@ window.__onAndroidBack = async () => {
 
     const user = await getCurrentUser();
     if (user) {
+      clearForcePromptLogin();
       navigateToLobby(user);
     } else {
       showScreen('login');

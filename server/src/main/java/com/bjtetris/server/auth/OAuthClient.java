@@ -25,18 +25,21 @@ public class OAuthClient {
     this.restClient = RestClient.builder().build();
   }
 
-  public String buildAuthorizeUrl(String redirectUri, String state, String verifier) {
+  public String buildAuthorizeUrl(String redirectUri, String state, String verifier, boolean forcePrompt) {
     String challenge = createCodeChallenge(verifier);
-    return org.springframework.web.util.UriComponentsBuilder.fromHttpUrl(appProperties.getAuth().getAuthorizeEndpoint())
-        .queryParam("response_type", "code")
-        .queryParam("client_id", appProperties.getAuth().getClientId())
-        .queryParam("redirect_uri", redirectUri)
-        .queryParam("scope", appProperties.getAuth().getScope())
-        .queryParam("state", state)
-        .queryParam("code_challenge", challenge)
-        .queryParam("code_challenge_method", "S256")
-        .build(true)
-        .toUriString();
+    var builder =
+        org.springframework.web.util.UriComponentsBuilder.fromHttpUrl(appProperties.getAuth().getAuthorizeEndpoint())
+            .queryParam("response_type", "code")
+            .queryParam("client_id", appProperties.getAuth().getClientId())
+            .queryParam("redirect_uri", redirectUri)
+            .queryParam("scope", appProperties.getAuth().getScope())
+            .queryParam("state", state)
+            .queryParam("code_challenge", challenge)
+            .queryParam("code_challenge_method", "S256");
+    if (forcePrompt) {
+      builder.queryParam("prompt", "login");
+    }
+    return builder.build(true).toUriString();
   }
 
   public Map<String, Object> exchangeCode(String code, String redirectUri, String verifier) {
@@ -66,6 +69,21 @@ public class OAuthClient {
             .body(new ParameterizedTypeReference<>() {});
 
     return response == null ? new LinkedHashMap<>() : response;
+  }
+
+  public String buildLogoutUrl(String postLogoutRedirectUri, String idTokenHint) {
+    String endSessionEndpoint = appProperties.getAuth().getEndSessionEndpoint();
+    if (endSessionEndpoint == null || endSessionEndpoint.isBlank()) {
+      return postLogoutRedirectUri;
+    }
+
+    var builder =
+        org.springframework.web.util.UriComponentsBuilder.fromHttpUrl(endSessionEndpoint)
+            .queryParam("post_logout_redirect_uri", postLogoutRedirectUri);
+    if (idTokenHint != null && !idTokenHint.isBlank()) {
+      builder.queryParam("id_token_hint", idTokenHint);
+    }
+    return builder.build(true).toUriString();
   }
 
   private String createCodeChallenge(String verifier) {

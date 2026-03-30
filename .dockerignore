@@ -1,0 +1,17 @@
+.git
+.gitignore
+.idea
+*.iml
+
+web/
+android/
+docs/
+
+server/build/
+server/.gradle/
+
+data/
+
+*.md
+Dockerfile
+.dockerignore

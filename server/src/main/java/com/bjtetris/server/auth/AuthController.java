@@ -43,10 +43,17 @@ public class AuthController {
   }
 
   @GetMapping("/login")
-  public RedirectView login(HttpServletRequest request, HttpServletResponse response) {
+  public RedirectView login(
+      @RequestParam(name = "prompt", required = false) String prompt,
+      HttpServletRequest request,
+      HttpServletResponse response) {
     OAuthCookieService.OAuthRequest oAuthRequest = oAuthCookieService.issue(response);
     String authorizeUrl =
-        oAuthClient.buildAuthorizeUrl(buildCallbackUrl(request), oAuthRequest.state(), oAuthRequest.verifier());
+        oAuthClient.buildAuthorizeUrl(
+            buildCallbackUrl(request),
+            oAuthRequest.state(),
+            oAuthRequest.verifier(),
+            "login".equalsIgnoreCase(prompt));
     return new RedirectView(authorizeUrl);
   }
 
@@ -76,19 +83,23 @@ public class AuthController {
 
       Map<String, Object> tokenResponse = oAuthClient.exchangeCode(code, buildCallbackUrl(request), cookies.verifier());
       String accessToken = stringValue(tokenResponse, "access_token");
+      String idToken = stringValue(tokenResponse, "id_token");
       if (accessToken == null || accessToken.isBlank()) {
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "토큰 응답에 access_token이 없습니다.");
+      }
+      if (idToken == null || idToken.isBlank()) {
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "토큰 응답에 id_token이 없습니다.");
       }
 
       Map<String, Object> userInfo = oAuthClient.fetchUserInfo(accessToken);
       AppUser user = appUserService.upsertFromUserInfo(appProperties.getAuth().getIssuer(), userInfo);
-      AppSession session = sessionCookieService.createSession(user);
+      AppSession session = sessionCookieService.createSession(user, idToken);
       sessionCookieService.writeSessionCookie(response, session.getSessionToken());
       oAuthCookieService.clear(response);
-      return new RedirectView("/");
+      return new RedirectView(buildFrontendUrl(null, null));
     } catch (RuntimeException e) {
       oAuthCookieService.clear(response);
-      return new RedirectView("/?authError=" + encode(e.getMessage()));
+      return new RedirectView(buildFrontendUrl("authError", e.getMessage()));
     }
   }
 
@@ -96,6 +107,15 @@ public class AuthController {
   public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
     sessionCookieService.invalidateSession(request, response);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/logout")
+  public RedirectView logoutWithRedirect(HttpServletRequest request, HttpServletResponse response) {
+    String idTokenHint =
+        sessionCookieService.resolveSession(request).map(AppSession::getIdToken).orElse(null);
+    sessionCookieService.invalidateSession(request, response);
+    oAuthCookieService.clear(response);
+    return new RedirectView(oAuthClient.buildLogoutUrl(buildFrontendUrl(null, null), idTokenHint));
   }
 
   private String buildCallbackUrl(HttpServletRequest request) {
@@ -106,8 +126,13 @@ public class AuthController {
         .toUriString();
   }
 
-  private String encode(String message) {
-    return java.net.URLEncoder.encode(message == null ? "로그인 실패" : message, java.nio.charset.StandardCharsets.UTF_8);
+  private String buildFrontendUrl(String queryKey, String queryValue) {
+    UriComponentsBuilder builder =
+        UriComponentsBuilder.fromUriString(appProperties.getFrontend().getBaseUrl());
+    if (queryKey != null && queryValue != null) {
+      builder.replaceQueryParam(queryKey, queryValue == null ? "로그인 실패" : queryValue);
+    }
+    return builder.build().toUriString();
   }
 
   private String stringValue(Map<String, Object> source, String key) {

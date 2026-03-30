@@ -17,9 +17,14 @@ Single repository for the BJ Tetris web client, Android app, and Spring backend.
 ## Run
 
 - Start the central auth server first.
-- Run the Spring server from the repository root with a local Gradle installation:
-  `gradle -p server bootRun`
-- Open `http://127.0.0.1:8080/`
+- Run the Spring server:
+  `./server/gradlew -p server bootRun`
+- Serve `web/` separately, for example:
+  `python3 -m http.server 5500 --directory web`
+- Open `http://127.0.0.1:5500`
+- If you use different ports or domains, update:
+  - `server/src/main/resources/application.yml` `app.frontend.base-url`
+  - `web/index.html` `backendBaseUrl`
 
 ## Current Auth Flow
 

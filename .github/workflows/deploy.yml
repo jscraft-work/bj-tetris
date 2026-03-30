@@ -66,8 +66,11 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          curl -fsS -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.WEBHOOK_SECRET }}" \
+      - name: Call deploy webhook
+        run: |
+          PAYLOAD='{"image":"${{ env.IMAGE_NAME }}:${{ github.sha }}"}'
+          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "${{ secrets.WEBHOOK_SECRET }}" | awk '{print "sha256=" $2}')
+          curl -sf -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}/webhook/deploy" \
             -H "Content-Type: application/json" \
-            -d '{"image":"${{ env.IMAGE_NAME }}","sha":"${{ github.sha }}"}'
+            -H "X-Hub-Signature-256: $SIGNATURE" \
+            -d "$PAYLOAD"

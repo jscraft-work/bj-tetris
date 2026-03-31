@@ -1,11 +1,13 @@
 package com.bjtetris.server.record;
 
-import com.bjtetris.server.session.CurrentUserService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.bjtetris.server.user.AppUser;
+import com.bjtetris.server.user.AppUserService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,11 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class GameRecordController {
 
-  private final CurrentUserService currentUserService;
+  private final AppUserService appUserService;
   private final GameRecordService gameRecordService;
 
-  public GameRecordController(CurrentUserService currentUserService, GameRecordService gameRecordService) {
-    this.currentUserService = currentUserService;
+  public GameRecordController(AppUserService appUserService, GameRecordService gameRecordService) {
+    this.appUserService = appUserService;
     this.gameRecordService = gameRecordService;
   }
 
@@ -32,24 +34,19 @@ public class GameRecordController {
 
   @GetMapping("/my-records")
   public ResponseEntity<?> myRecords(
-      @RequestParam(defaultValue = "20") int limit, HttpServletRequest request) {
-    return currentUserService
-        .resolve(request)
-        .<ResponseEntity<?>>map(
-            user -> ResponseEntity.ok(gameRecordService.getMyRecords(user.getId(), Math.min(Math.max(limit, 1), 100))))
-        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Unauthorized")));
+      @RequestParam(defaultValue = "20") int limit,
+      @AuthenticationPrincipal OidcUser oidcUser) {
+    AppUser user = appUserService.resolveFromOidc(oidcUser);
+    return ResponseEntity.ok(
+        gameRecordService.getMyRecords(user.getId(), Math.min(Math.max(limit, 1), 100)));
   }
 
   @PostMapping("/records")
   public ResponseEntity<?> saveRecord(
-      @Valid @RequestBody GameRecordRequest gameRecordRequest, HttpServletRequest request) {
-    return currentUserService
-        .resolve(request)
-        .<ResponseEntity<?>>map(
-            user -> {
-              gameRecordService.save(user, gameRecordRequest);
-              return ResponseEntity.ok(Map.of("success", true));
-            })
-        .orElseGet(() -> ResponseEntity.status(401).body(Map.of("error", "Unauthorized")));
+      @Valid @RequestBody GameRecordRequest gameRecordRequest,
+      @AuthenticationPrincipal OidcUser oidcUser) {
+    AppUser user = appUserService.resolveFromOidc(oidcUser);
+    gameRecordService.save(user, gameRecordRequest);
+    return ResponseEntity.ok(Map.of("success", true));
   }
 }

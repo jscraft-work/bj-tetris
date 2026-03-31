@@ -11,23 +11,30 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          bj-auth:
+            client-id: ${AUTH_CLIENT_ID:bj-tetris-web}
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile
+        provider:
+          bj-auth:
+            issuer-uri: ${AUTH_ISSUER:http://127.0.0.1:9000}
 
 server:
   port: ${SERVER_PORT:9001}
+  servlet:
+    session:
+      cookie:
+        name: BJ_TETRIS_SESSION
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+      timeout: 14d
 
 app:
-  auth:
-    issuer: ${AUTH_ISSUER:http://127.0.0.1:9000}
-    authorize-endpoint: ${AUTH_AUTHORIZE_ENDPOINT:http://127.0.0.1:9000/oauth2/authorize}
-    token-endpoint: ${AUTH_TOKEN_ENDPOINT:http://127.0.0.1:9000/oauth2/token}
-    user-info-endpoint: ${AUTH_USERINFO_ENDPOINT:http://127.0.0.1:9000/userinfo}
-    end-session-endpoint: ${AUTH_END_SESSION_ENDPOINT:http://127.0.0.1:9000/connect/logout}
-    client-id: ${AUTH_CLIENT_ID:bj-tetris-web}
-    scope: openid profile
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://127.0.0.1:5500}
-  session:
-    cookie-name: BJ_TETRIS_SESSION
-    cookie-domain: ${SESSION_COOKIE_DOMAIN:}
-    cookie-secure: ${SESSION_COOKIE_SECURE:false}
-    max-age-seconds: 1209600

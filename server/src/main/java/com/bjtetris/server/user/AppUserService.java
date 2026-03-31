@@ -2,6 +2,7 @@ package com.bjtetris.server.user;
 
 import java.time.Instant;
 import java.util.Map;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,14 @@ public class AppUserService {
       }
     }
     return "player";
+  }
+
+  @Transactional(readOnly = true)
+  public AppUser resolveFromOidc(OidcUser oidcUser) {
+    String issuer = oidcUser.getIssuer().toString();
+    String subject = oidcUser.getSubject();
+    return appUserRepository.findByIssuerAndSubjectId(issuer, subject)
+        .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다."));
   }
 
   private String stringValue(Map<String, Object> source, String key) {

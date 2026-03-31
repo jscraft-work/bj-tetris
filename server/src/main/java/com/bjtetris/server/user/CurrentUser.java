@@ -1,6 +1,4 @@
-package com.bjtetris.server.session;
-
-import com.bjtetris.server.user.AppUser;
+package com.bjtetris.server.user;
 
 public record CurrentUser(Long id, String displayName, String email, String username) {
 

@@ -9,7 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
@@ -62,7 +62,7 @@ public class SecurityConfig {
     return http.build();
   }
 
-  private OAuth2UserService<OAuth2UserRequest, OidcUser> oidcUserService() {
+  private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
     OidcUserService delegate = new OidcUserService();
     return userRequest -> {
       OidcUser oidcUser = delegate.loadUser(userRequest);

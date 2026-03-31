@@ -39,7 +39,7 @@ public class OAuthClient {
     if (forcePrompt) {
       builder.queryParam("prompt", "login");
     }
-    return builder.build(true).toUriString();
+    return builder.build().encode().toUriString();
   }
 
   public Map<String, Object> exchangeCode(String code, String redirectUri, String verifier) {
@@ -83,7 +83,7 @@ public class OAuthClient {
     if (idTokenHint != null && !idTokenHint.isBlank()) {
       builder.queryParam("id_token_hint", idTokenHint);
     }
-    return builder.build(true).toUriString();
+    return builder.build().encode().toUriString();
   }
 
   private String createCodeChallenge(String verifier) {

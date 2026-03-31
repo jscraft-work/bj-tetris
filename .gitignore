@@ -16,3 +16,7 @@ android/*.apk
 server/.gradle/
 server/build/
 data/
+
+# Web
+web/node_modules/
+web/dist/

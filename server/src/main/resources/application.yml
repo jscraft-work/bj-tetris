@@ -23,7 +23,7 @@ app:
     user-info-endpoint: ${AUTH_USERINFO_ENDPOINT:http://127.0.0.1:9000/userinfo}
     end-session-endpoint: ${AUTH_END_SESSION_ENDPOINT:http://127.0.0.1:9000/connect/logout}
     client-id: ${AUTH_CLIENT_ID:bj-tetris-web}
-    scope: openid
+    scope: openid profile
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://127.0.0.1:5500}
   session:

@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        webView.loadUrl("https://bae-jongsoo.github.io/bj-tetris/");
+        webView.loadUrl("https://tetris.jscraft.work/");
     }
 
     private void requestFullscreen() {

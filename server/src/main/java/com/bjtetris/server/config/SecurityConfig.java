@@ -81,7 +81,16 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "GET"))
-                        .logoutSuccessHandler(oidcLogoutSuccessHandler())
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            var delegate = oidcLogoutSuccessHandler();
+                            delegate.setRedirectStrategy((req, res, url) -> {
+                                res.setStatus(200);
+                                res.setContentType("application/json");
+                                res.getWriter().write("{\"logoutUrl\":\"" + url + "\"}");
+                                res.getWriter().flush();
+                            });
+                            delegate.onLogoutSuccess(request, response, authentication);
+                        })
                 );
 
         return http.build();

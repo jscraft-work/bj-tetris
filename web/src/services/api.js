@@ -57,5 +57,7 @@ export async function getMyRecords(limit = 10) {
 }
 
 export async function logout() {
-  window.location.assign(buildUrl('/auth/logout'));
+  const res = await fetch(buildUrl('/auth/logout'), { credentials: 'include' });
+  const data = await res.json();
+  window.location.href = data.logoutUrl || '/';
 }

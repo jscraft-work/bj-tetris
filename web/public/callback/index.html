@@ -18,21 +18,13 @@
     credentials: 'include',
   })
     .then(res => {
-      console.log('status:', res.status);
-      return res.text();
-    })
-    .then(text => {
-      console.log('response:', text);
-      try {
-        const data = JSON.parse(text);
-        window.location.href = data.redirectUrl || '/';
-      } catch (e) {
-        console.error('JSON parse failed:', e);
-        window.location.href = '/?authError=parse_failed';
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        window.location.href = '/?authError=login_failed';
       }
     })
-    .catch(err => {
-      console.error('fetch failed:', err);
+    .catch(() => {
       window.location.href = '/?authError=login_failed';
     });
 </script>

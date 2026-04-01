@@ -72,6 +72,8 @@ public class SecurityConfig {
                         .successHandler((request, response, authentication) -> {
                             response.setStatus(200);
                             response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":true}");
+                            response.getWriter().flush();
                         })
                         .failureHandler((request, response, exception) ->
                                 response.sendRedirect(frontendBaseUrl + "?authError=" + exception.getMessage())

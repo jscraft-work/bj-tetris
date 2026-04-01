@@ -62,7 +62,10 @@ public class SecurityConfig {
                                 .authorizationRedirectStrategy((request, response, url) -> {
                                     response.setStatus(200);
                                     response.setContentType("application/json");
-                                    new ObjectMapper().writeValue(response.getOutputStream(), Map.of("authorizeUrl", url));
+                                    String json = new ObjectMapper().writeValueAsString(Map.of("authorizeUrl", url));
+                                    response.setContentLength(json.getBytes().length);
+                                    response.getWriter().write(json);
+                                    response.getWriter().flush();
                                 })
                         )
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService()))

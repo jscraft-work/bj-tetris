@@ -3,11 +3,14 @@ function getBackendBaseUrl() {
 }
 
 export async function beginLogin() {
-  const res = await fetch(`${getBackendBaseUrl()}/oauth2/authorization/bj-auth`, {
-      credentials: 'include',
-    });
-    const data = await res.json();
-
-    // 2. auth서버로 직접 리다이렉트
-    window.location.href = data.authorizeUrl;
+  const url = `${getBackendBaseUrl()}/oauth2/authorization/bj-auth`;
+  console.log('[auth] fetching:', url);
+  const res = await fetch(url, { credentials: 'include' });
+  console.log('[auth] status:', res.status);
+  console.log('[auth] content-length:', res.headers.get('content-length'));
+  const text = await res.text();
+  console.log('[auth] body length:', text.length);
+  console.log('[auth] body:', text);
+  const data = JSON.parse(text);
+  window.location.href = data.authorizeUrl;
 }

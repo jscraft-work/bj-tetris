@@ -17,11 +17,22 @@
   fetch(`${backendBaseUrl}/login/oauth2/code/bj-auth?code=${code}&state=${state}`, {
     credentials: 'include',
   })
-    .then(res => res.json())
-    .then(data => {
-      window.location.href = data.redirectUrl || '/';
+    .then(res => {
+      console.log('status:', res.status);
+      return res.text();
     })
-    .catch(() => {
+    .then(text => {
+      console.log('response:', text);
+      try {
+        const data = JSON.parse(text);
+        window.location.href = data.redirectUrl || '/';
+      } catch (e) {
+        console.error('JSON parse failed:', e);
+        window.location.href = '/?authError=parse_failed';
+      }
+    })
+    .catch(err => {
+      console.error('fetch failed:', err);
       window.location.href = '/?authError=login_failed';
     });
 </script>

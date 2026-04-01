@@ -108,8 +108,7 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
-        source.registerCorsConfiguration("/auth/**", config);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

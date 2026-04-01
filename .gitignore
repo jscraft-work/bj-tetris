@@ -20,3 +20,5 @@ data/
 # Web
 web/node_modules/
 web/dist/
+
+.idea

@@ -237,6 +237,7 @@ export function createInitialState(options = {}) {
     lastClearLines: 0,
     clearing: null,
     groundedAt: null,
+    pendingSpawnAfterAllClear: false,
     events: [],
     vfx: {
       rotateUntil: 0,
@@ -563,7 +564,10 @@ function finishClearing(state) {
 
   if (isBoardEmpty(state.board)) {
     state.vfx.allClearUntil = Date.now() + VFX_ALL_CLEAR_MS;
+    state.pendingSpawnAfterAllClear = true;
+    state.active = null;
     emitEvent(state, 'all_clear');
+    return;
   }
 
   spawnNextPiece(state);
@@ -604,17 +608,20 @@ function settleActive(state) {
 
 export function stepDrop(state) {
   if (state.status !== 'playing') {
-    return;
+    return false;
   }
 
   const next = { ...state.active, y: state.active.y + 1 };
   if (canPlacePiece(state, next)) {
     state.active = next;
     emitEvent(state, 'move');
-    return;
+    return true;
   }
 
-  settleActive(state);
+  if (!state.groundedAt) {
+    state.groundedAt = Date.now();
+  }
+  return false;
 }
 
 export function moveActivePiece(state, direction) {
@@ -737,6 +744,17 @@ export function stepPhysics(state, deltaMs) {
     return;
   }
 
+  if (state.vfx.allClearUntil > 0) {
+    if (Date.now() >= state.vfx.allClearUntil) {
+      state.vfx.allClearUntil = 0;
+      if (state.pendingSpawnAfterAllClear) {
+        state.pendingSpawnAfterAllClear = false;
+        spawnNextPiece(state);
+      }
+    }
+    return;
+  }
+
   if (state.active) {
     const canDown = canPlacePiece(state, { ...state.active, y: state.active.y + 1 });
     if (!canDown) {
@@ -757,7 +775,10 @@ export function stepPhysics(state, deltaMs) {
   const dropMs = getDropMsForState(state);
   while (state.dropAccumulator >= dropMs && state.status === 'playing') {
     state.dropAccumulator -= dropMs;
-    stepDrop(state);
+    const moved = stepDrop(state);
+    if (!moved) {
+      break;
+    }
     if (state.status === 'gameover') {
       break;
     }

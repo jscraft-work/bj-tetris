@@ -464,95 +464,56 @@ function drawAllClear(ctx, state, layout, now) {
   const progress = elapsed / VFX_ALL_CLEAR_MS;
 
   const centerX = boardW / 2;
-  const centerY = boardH * 0.38;
+  const centerY = boardH * 0.42;
 
   ctx.save();
 
-  // Background flash (fades out quickly)
-  if (progress < 0.3) {
-    const flashAlpha = 0.18 * (1 - progress / 0.3);
-    ctx.fillStyle = `rgba(255, 255, 220, ${flashAlpha})`;
-    ctx.fillRect(0, 0, boardW, boardH);
-  }
+  const textAlpha = progress > 0.82 ? Math.max(0, 1 - (progress - 0.82) / 0.18) : 1;
+  const scale = progress < 0.18 ? 0.8 + (progress / 0.18) * 0.2 : 1;
+  const hue = (elapsed * 0.12) % 360;
+  const glowColor = `hsl(${hue}, 100%, 70%)`;
 
-  // Text fade: fully visible then fades out in last 30%
-  const textAlpha = progress > 0.7 ? Math.max(0, 1 - (progress - 0.7) / 0.3) : 1;
+  ctx.fillStyle = 'rgba(6, 12, 28, 0.72)';
+  ctx.fillRect(0, 0, boardW, boardH);
 
-  // Scale: zoom in quickly then settle
-  const scale = progress < 0.12 ? 0.3 + (progress / 0.12) * 0.7 : 1;
-
-  // Rainbow hue cycling
-  const hue = (elapsed * 0.18) % 360;
-  const glowColor = `hsl(${hue}, 100%, 65%)`;
+  const panelW = boardW * 0.72;
+  const panelH = Math.max(96, boardH * 0.28);
+  const panelX = (boardW - panelW) / 2;
+  const panelY = centerY - panelH / 2;
 
   ctx.globalAlpha = textAlpha;
+  ctx.fillStyle = 'rgba(13, 24, 52, 0.92)';
+  ctx.fillRect(panelX, panelY, panelW, panelH);
+  ctx.strokeStyle = glowColor;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(panelX + 1.5, panelY + 1.5, panelW - 3, panelH - 3);
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
-  // Draw main text
-  const fontSize = Math.max(16, Math.min(boardW / 5.5, cell * 2.2));
   ctx.save();
-  ctx.translate(centerX, centerY);
+  ctx.translate(centerX, centerY - panelH * 0.08);
   ctx.scale(scale, scale);
-
   ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 25;
-  ctx.font = `bold ${fontSize}px "Segoe UI", Arial, sans-serif`;
+  ctx.shadowBlur = 18;
+  ctx.font = `bold ${Math.max(22, Math.min(boardW / 6, cell * 2.1))}px "Segoe UI", Arial, sans-serif`;
   ctx.fillStyle = '#ffffff';
   ctx.fillText('ALL CLEAR!', 0, 0);
-  ctx.fillText('ALL CLEAR!', 0, 0);
-
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = glowColor;
-  ctx.lineWidth = 2;
-  ctx.strokeText('ALL CLEAR!', 0, 0);
   ctx.restore();
 
-  // Sparkle particles radiating outward
-  const particleCount = 24;
-  for (let i = 0; i < particleCount; i += 1) {
-    const seed = i * 137.508;
-    const angle = (seed % 360) * (Math.PI / 180) + elapsed * 0.001;
-    const speed = 0.06 + (i % 5) * 0.015;
-    const radius = elapsed * speed;
-    const maxRadius = boardW * 0.5;
-    if (radius > maxRadius) {
-      continue;
-    }
+  ctx.font = `bold ${Math.max(11, cell * 0.72)}px "Segoe UI", Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(220, 232, 255, 0.92)';
+  ctx.fillText('Board Reset Bonus', centerX, centerY + panelH * 0.18);
 
-    const px = centerX + Math.cos(angle) * radius;
-    const py = centerY + Math.sin(angle) * radius;
-    const pSize = (2 + (i % 3)) * (1 - radius / maxRadius);
-    const pHue = (hue + i * 15) % 360;
-    const pAlpha = textAlpha * Math.max(0, 1 - radius / maxRadius);
-
-    ctx.globalAlpha = pAlpha * 0.9;
-    ctx.fillStyle = `hsl(${pHue}, 100%, 70%)`;
-    ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
-  }
-
-  // Falling confetti
-  const confettiCount = 16;
-  for (let i = 0; i < confettiCount; i += 1) {
-    const cx = ((i * 73 + 17) % 100) / 100 * boardW;
-    const fallSpeed = 0.04 + (i % 4) * 0.012;
-    const cy = -10 + elapsed * fallSpeed + Math.sin(elapsed * 0.003 + i) * 15;
-    if (cy < 0 || cy > boardH) {
-      continue;
-    }
-
-    const cw = 3 + (i % 3);
-    const ch = 2 + (i % 2);
-    const cHue = (hue + i * 22) % 360;
-    const cAlpha = textAlpha * 0.7;
-
-    ctx.globalAlpha = cAlpha;
-    ctx.fillStyle = `hsl(${cHue}, 90%, 65%)`;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(elapsed * 0.005 + i);
-    ctx.fillRect(-cw / 2, -ch / 2, cw, ch);
-    ctx.restore();
+  const sparkleCount = 18;
+  for (let i = 0; i < sparkleCount; i += 1) {
+    const angle = ((i * 41 + elapsed * 0.08) % 360) * (Math.PI / 180);
+    const radiusX = panelW * 0.44;
+    const radiusY = panelH * 0.65;
+    const px = centerX + Math.cos(angle) * radiusX;
+    const py = centerY + Math.sin(angle) * radiusY;
+    const size = 2 + (i % 3);
+    ctx.fillStyle = `hsla(${(hue + i * 12) % 360}, 100%, 72%, ${0.35 * textAlpha})`;
+    ctx.fillRect(px - size / 2, py - size / 2, size, size);
   }
 
   ctx.restore();

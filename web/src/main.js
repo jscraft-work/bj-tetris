@@ -921,7 +921,7 @@ function gameLoop(time) {
   const events = drainEvents(gameState);
   handleEvents(events);
 
-  render(gameState, layout, ctx, time);
+  render(gameState, layout, ctx, Date.now());
   renderNext(gameState, nextLayout, nextCanvas);
   applyHud();
   updateOverlay();

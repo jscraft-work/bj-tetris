@@ -9,7 +9,7 @@ export const VFX_ROTATE_MS = 140;
 export const VFX_LINE_CLEAR_MS = 110;
 export const VFX_LINE_FADE_MS = 350;
 export const VFX_IMPACT_MS = 100;
-export const VFX_ALL_CLEAR_MS = 2500;
+export const VFX_ALL_CLEAR_MS = 1800;
 export const VFX_POOP_SPLASH_MS = 420;
 export const LOCK_DELAY_MS = 200;
 

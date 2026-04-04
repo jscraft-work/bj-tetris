@@ -1,37 +1,61 @@
 # BJ Tetris
 
-Single repository for the BJ Tetris web client, Android app, and Spring backend.
+> **[Play Demo](https://tetris.jscraft.work/)**
 
-## Structure
+Tetris game project. Web client + Spring Boot server + Android app, all in one repo.
 
-- `web/`: static web client
-- `android/`: Android WebView wrapper app
-- `server/`: Spring Boot backend
-- `docs/`: PRDs and notes
+## Tech Stack
 
-## Notes
+| Layer | Stack |
+|-------|-------|
+| Web Client | Vanilla JS, HTML5 Canvas, Vite |
+| Server | Java 21, Spring Boot 3, PostgreSQL, Flyway |
+| Android | Kotlin/Java, WebView, Immersive Mode |
+| Auth | OAuth 2.0 / OIDC with server-side PKCE |
+| Infra | Docker |
 
-- The web client currently contains the OAuth PKCE callback experiment.
-- The backend is the next step for moving auth/session handling out of the browser.
+## Features
 
-## Run
+- Tetris with ghost piece, lock delay, level system
+- Login, leaderboard
+- Mobile touch controls
+- Custom block types, BGM settings
+- Sound effects and BGM (Web Audio API)
+- Android app (fullscreen WebView)
 
-- Start the central auth server first.
-- Run the Spring server:
-  `./server/gradlew -p server bootRun`
-- Serve `web/` separately, for example:
-  `python3 -m http.server 5500 --directory web`
-- Open `http://127.0.0.1:5500`
-- If you use different ports or domains, update:
-  - `server/src/main/resources/application.yml` `app.frontend.base-url`
-  - `web/index.html` `backendBaseUrl`
+## Project Structure
 
-## Current Auth Flow
+```
+web/       — Static web client (Vite + vanilla JS)
+server/    — Spring Boot backend (REST API, OAuth, PostgreSQL)
+android/   — Android WebView wrapper app
+docs/      — PRDs and notes
+```
 
-- `GET /auth/login`: starts OIDC login with server-side PKCE cookies
-- `GET /auth/callback`: exchanges the code, fetches userinfo, creates a local user/session
-- `POST /auth/logout`: clears the local session
-- `GET /api/me`: returns the current logged-in user
-- `GET /api/leaderboard`: leaderboard records
-- `GET /api/my-records`: current user's records
-- `POST /api/records`: saves a game record
+## Run Locally
+
+1. Start the Spring server:
+   ```
+   ./server/gradlew -p server bootRun
+   ```
+2. Serve `web/` separately:
+   ```
+   python3 -m http.server 5500 --directory web
+   ```
+3. Open `http://127.0.0.1:5500`
+
+If you use different ports or domains, update:
+- `server/src/main/resources/application.yml` → `app.frontend.base-url`
+- `web/index.html` → `backendBaseUrl`
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/auth/login` | Start OAuth login |
+| GET | `/auth/callback` | OAuth callback handler |
+| GET | `/auth/logout` | Logout |
+| GET | `/api/me` | Current user info |
+| GET | `/api/leaderboard` | Leaderboard |
+| GET | `/api/my-records` | My records |
+| POST | `/api/records` | Save record |
